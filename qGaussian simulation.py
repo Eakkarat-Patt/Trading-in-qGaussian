@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 def generateOmega(numPaths, numSteps, T, q):
     dt = T / float(numSteps)
     t = np.linspace(0, T, numSteps)
-    t[0] = 1e-10
+    t[0] = 1e-10 # set initial t close to 0 to avoid ZeroDivisionError
     N = np.random.normal(0.0, 1.0, [numPaths, numSteps])
     c = (np.pi * gamma(1 / (q - 1) - 0.5) ** 2) / ((q - 1) * gamma(1 / (q - 1)) ** 2)
     B = c ** ((1 - q) / (3 - q)) * ((2 - q) * (3 - q) * t) ** (-2 / (3 - q))
