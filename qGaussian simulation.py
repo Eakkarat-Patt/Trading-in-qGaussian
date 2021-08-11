@@ -1,7 +1,9 @@
 import numpy as np
 from scipy.special import gamma, factorial
 import matplotlib.pyplot as plt
-
+import seaborn as sns
+plt.rc('font',**{'family':'serif','serif':['Computer Modern Roman']})
+plt.rc('text',usetex=True)
 
 def generateOmega(numPaths, numSteps, T, q):
     dt = T / float(numSteps)
@@ -34,7 +36,7 @@ output3 = generateOmega(numPaths=100000, numSteps=1000, T=10, q=1.3)
 
 #timeGrid = output["time"]
 Omg_T1 = output1['Omg']
-Omg_T2 = output2['Omg']
+#Omg_T2 = output2['Omg']
 Omg_T3 = output3['Omg']
 #var = np.var(Omg_T[:, -1])
 
@@ -53,14 +55,21 @@ def TsallisVar(q, t):
 # plt.title("Wiener Distribution")
 # plt.show()
 
-plt.figure(1)
-plt.grid()
-plt.hist([Omg_T1[:, -1], Omg_T3[:,-1]], 50)
-plt.xlabel("time")
-plt.ylabel("value")
-plt.xlim(-25,25)
-plt.title("Tsallis Distribution")
-plt.show()
+
+
+def distPlot():
+    plt.figure(figsize=(8, 5), dpi=500)
+    sns.histplot([Omg_T1[:, -1], Omg_T3[:, -1]], bins=50)
+    plt.xlim(-25, 25)
+    plt.title('Tsallis Distribution')
+    plt.show()
+
+def pathPlot(numPaths = 20):
+    plt.figure(figsize=(8,5), dpi=500)
+    for i in range(numPaths):
+        plt.plot(output3['time'], Omg_T3[i, :])
+    plt.title('Brownian paths according to Tsallis statistics')
+    plt.show()
 
 # plt.figure(1)
 # plt.grid()
