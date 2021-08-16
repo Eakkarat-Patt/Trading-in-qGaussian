@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.special import gamma, factorial
+from scipy.special import gamma
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -29,7 +29,7 @@ def generateOmega(numPaths, numSteps, T, q):
     paths = {'time': t, 'c': c, 'B': B, 'Z': Z, 'W': W, 'Omg': Omg}
     return paths
 
-# var = np.var(Omg_T[:, -1])
+var = np.var(Omg_T[:, -1])
 
 def generateStockPath(sigma, r, T, q, S_0, numPaths, numSteps):
     paths = generateOmega(numPaths, numSteps, T, q)
@@ -77,13 +77,6 @@ def distPlot(func1, func2):
     sns.histplot(func1, binwidth=0.1, binrange=[-10, 10])
     sns.histplot(func2, color='r', binwidth=0.1, binrange=[-10, 10])
     plt.xlim(-6, 6)
-    plt.title('Tsallis Distribution')
-    plt.show()
-
-def distPlot2(func1):
-    plt.figure(figsize=(8, 5), dpi=500)
-    plt.hist(func1, bins=150)
-    plt.xlim(-5, 5)
     plt.title('Tsallis Distribution')
     plt.show()
 
