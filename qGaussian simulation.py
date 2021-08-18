@@ -60,10 +60,7 @@ class qGaussian(object):
         S[:, 0] = S_0
         alpha = 0.5 * (3-q) * ((2-q) * (3-q) * params['c'])**((q-1)/(3-q))
         for i in range(1, numSteps):
-            S[:, i] = S[:, i-1] * np.exp(sigma * (params['Omg'][:, i]-params['Omg'][:, i-1]) +
-                                         r * dt - 0.5 * sigma**2 * (1 - (1-q) * (params['B'][i]-params['B'][i-1]) *
-                                                                    (params['Omg'][:, i]**2-params['Omg'][:, i-1]**2)) *
-                                         alpha * (params['time'][i]**(2/(3-q))-params['time'][i-1]**(2/(3-q))))
+            S[:, i] =
         self.paths['time'] = params['time']
         self.paths['c'] = params['c']
         self.paths['B'] = params['B']
