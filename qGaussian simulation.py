@@ -58,9 +58,11 @@ class qGaussian(object):
         dt = T / float(numSteps)
         S = np.zeros([numPaths, numSteps])
         S[:, 0] = S_0
-        alpha = 0.5 * (3-q) * ((2-q) * (3-q) * params['c'])**((q-1)/(3-q))
+        Pq = ((1-params['B'] * (1-q) * params['Omg']**2)**(1/(1-q))) / params['Z']
         for i in range(1, numSteps):
-            S[:, i] =
+            S[:, i] = S[:, i - 1] + S[:, i - 1] * dt * (r + 0.5 * sigma**2 * Pq[:, i-1]**(1-q)) + sigma * S[:, i-1] * \
+                      (params['Omg'][:, i] - params['Omg'][:, i - 1])
+
         self.paths['time'] = params['time']
         self.paths['c'] = params['c']
         self.paths['B'] = params['B']
@@ -85,8 +87,8 @@ class qGaussian(object):
 stock1 = qGaussian()
 stock2 = qGaussian()
 
-stock1.generateStockPath(sigma=0.3, r=0.006, T=1, q=1.1, S_0=50, numPaths=10, numSteps=100000)
-stock2.generateStockPath(sigma=0.3, r=0.006, T=1, q=1.4, S_0=50, numPaths=10, numSteps=100000)
+stock1.generateStockPath(sigma=0.3, r=0.006, T=1, q=1.1, S_0=50, numPaths=100000, numSteps=1000)
+stock2.generateStockPath(sigma=0.3, r=0.006, T=1, q=1.4, S_0=50, numPaths=100000, numSteps=1000)
 
 
 def logReturn(func):
@@ -123,7 +125,7 @@ def distPlot(func1, func2):
 def pathPlot(numPaths=20):
     plt.figure(figsize=(8, 5), dpi=500)
     for i in range(numPaths):
-        plt.plot(stock2['time'], stock2['S'][i, :])
+        plt.plot(stock2.getTime(), stock2.getS()[i, :])
     plt.title('Stock price path according to Tsallis statistics')
     plt.show()
 
