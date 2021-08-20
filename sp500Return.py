@@ -2,8 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-import pandas_datareader.data as web
-import datetime
 
 
 
@@ -11,14 +9,18 @@ def TsallisDist(numSamples):
     Z = np.random.normal(0.0, 1.0, [numSamples])
 
 
-def spReturn():
-    start = datetime.datetime(1980, 1, 1)
-    end = datetime.datetime(2021, 12, 31)
-
-    price = web.DataReader(['sp500'], 'fred', start, end)
-    price['daily_return'] = (price['sp500'] / price['sp500'].shift(1)) - 1
-    price['daily_log_return'] = (np.log(price['sp500'] / price['sp500'].shift(1)))
-    mean = price['daily_log_return'].mean()
-    std = price['daily_log_return'].std()
-    price['normalized log return'] = (price["daily_log_return"] - mean) / std
-    plt.figure(figsize=(8, 5))
+def spReturn(start, end=None):
+    df = pd.read_csv('spx_d.csv')[['Date', 'Close']]
+    df = df.set_index('Date')
+    if end == None:
+        df = df.loc[start:]
+    else:
+        df = df.loc[start:end]
+    print(df.shape)
+    df['Log return'] = np.log(df['Close']/df['Close'].shift(1))
+    df['Log return'] = (df['Log return']-df['Log return'].mean())/df['Log return'].std() #Standardization
+    plt.figure(figsize=(8,5), dpi=400)
+    sns.histplot(df['Log return'], binwidth=0.1, kde=True, color='r')
+    sns.histplot(np.random.normal(0, 1.0, [df.shape[0]]), kde=True, binwidth=0.1)
+    plt.xlim(-6, 6)
+    plt.show()

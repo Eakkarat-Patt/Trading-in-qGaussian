@@ -58,15 +58,15 @@ class qGaussian(object):
         """
         params = self.generateOmega(numPaths, numSteps, T, q)
         dt = T / float(numSteps)
-        S = np.zeros([numPaths, numSteps])
         S1 = np.zeros([numPaths, numSteps])
-        S[:, 0] = S_0
+        S2 = np.zeros([numPaths, numSteps])
         S1[:, 0] = S_0
+        S2[:, 0] = S_0
         Pq = ((1-params['B'] * (1-q) * params['Omg']**2)**(1/(1-q))) / params['Z']
         for i in range(1, numSteps):
-            S[:, i] = S[:, i - 1] + S[:, i - 1] * dt * (r + 0.5 * sigma**2 * Pq[:, i-1]**(1-q)) + sigma * S[:, i-1] * \
+            S1[:, i] = S1[:, i - 1] + S1[:, i - 1] * dt * (r + 0.5 * sigma**2 * Pq[:, i-1]**(1-q)) + sigma * S1[:, i-1] * \
                       (params['Omg'][:, i] - params['Omg'][:, i - 1])
-            S1[:, i] = S1[:, i-1] + r * S1[:, i-1] * dt + sigma * S1[:, i-1] * (params['W'][:, i] - params['W'][:, i-1])
+            S2[:, i] = S2[:, i-1] + r * S2[:, i-1] * dt + sigma * S2[:, i-1] * (params['W'][:, i] - params['W'][:, i-1])
 
         self.paths['time'] = params['time']
         self.paths['c'] = params['c']
@@ -74,8 +74,8 @@ class qGaussian(object):
         self.paths['Z'] = params['Z']
         self.paths['W'] = params['W']
         self.paths['Omg'] = params['Omg']
-        self.paths['S'] = S
         self.paths['S1'] = S1
+        self.paths['S2'] = S2
 
     def getTime(self):
         return self.paths['time']
@@ -86,13 +86,12 @@ class qGaussian(object):
     def getOmg(self):
         return self.paths['Omg']
 
-    def getS(self):
-        return self.paths['S']
-
     def getS1(self):
         return self.paths['S1']
 
-#+ 0.5 * sigma**2 * Pq[:, i-1]**(1-q)
+    def getS2(self):
+        return self.paths['S2']
+
 stock1 = qGaussian()
 stock2 = qGaussian()
 
@@ -107,25 +106,11 @@ def logReturn(func):
     df['daily log return'] = (df['daily log return']-df['daily log return'].mean())/df['daily log return'].std() # standardization
     return df['daily log return']
 
-def TsallisVar(q, t):
-    c = (np.pi * gamma(1 / (q - 1) - 0.5) ** 2) / ((q - 1) * gamma(1 / (q - 1)) ** 2)
-    B = c ** ((1 - q) / (3 - q)) * ((2 - q) * (3 - q) * t) ** (-2 / (3 - q))
-    return 1 / ((5 - 3 * q) * B)
-
-def varOmg(numPaths, numSteps, T, q):
-    paths = generateOmega(numPaths, numSteps, T, q)
-    time = paths['time']
-    Omg_t = paths['Omg']
-    varOmg_t = np.zeros([numSteps])
-    for i in range(1, numSteps):
-        varOmg_t[i] = Omg_t[:, i].var()
-    paths2 = {'time' : paths['time'],'varOmg_t': varOmg_t}
-    return paths2
 
 def distPlot(func1, func2):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1, binwidth=0.1, binrange=[-10, 10])
-    sns.histplot(func2, color='r', binwidth=0.1, binrange=[-10, 10])
+    sns.histplot(func1, color='r', binwidth=0.1, binrange=[-10, 10])
+    sns.histplot(func2, binwidth=0.1, binrange=[-10, 10])
     plt.xlim(-6, 6)
     plt.title('Tsallis Distribution')
     plt.show()
@@ -149,5 +134,20 @@ def varPlot(numPaths, numSteps, T, q):
     plt.xlabel('Time')
     plt.ylabel('Error')
     plt.show()
+
+def TsallisVar(q, t):
+    c = (np.pi * gamma(1 / (q - 1) - 0.5) ** 2) / ((q - 1) * gamma(1 / (q - 1)) ** 2)
+    B = c ** ((1 - q) / (3 - q)) * ((2 - q) * (3 - q) * t) ** (-2 / (3 - q))
+    return 1 / ((5 - 3 * q) * B)
+
+def varOmg(numPaths, numSteps, T, q):
+    paths = generateOmega(numPaths, numSteps, T, q)
+    time = paths['time']
+    Omg_t = paths['Omg']
+    varOmg_t = np.zeros([numSteps])
+    for i in range(1, numSteps):
+        varOmg_t[i] = Omg_t[:, i].var()
+    paths2 = {'time' : paths['time'],'varOmg_t': varOmg_t}
+    return paths2
 
 
