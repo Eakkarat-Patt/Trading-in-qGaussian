@@ -3,6 +3,8 @@ from scipy.special import gamma
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import pandas_datareader.data as web
+import datetime
 
 plt.rc('font', **{'family': 'serif', 'serif': ['Computer Modern Roman']})
 plt.rc('text', usetex=True)
@@ -57,11 +59,14 @@ class qGaussian(object):
         params = self.generateOmega(numPaths, numSteps, T, q)
         dt = T / float(numSteps)
         S = np.zeros([numPaths, numSteps])
+        S1 = np.zeros([numPaths, numSteps])
         S[:, 0] = S_0
+        S1[:, 0] = S_0
         Pq = ((1-params['B'] * (1-q) * params['Omg']**2)**(1/(1-q))) / params['Z']
         for i in range(1, numSteps):
             S[:, i] = S[:, i - 1] + S[:, i - 1] * dt * (r + 0.5 * sigma**2 * Pq[:, i-1]**(1-q)) + sigma * S[:, i-1] * \
                       (params['Omg'][:, i] - params['Omg'][:, i - 1])
+            S1[:, i] = S1[:, i-1] + r * S1[:, i-1] * dt + sigma * S1[:, i-1] * (params['W'][:, i] - params['W'][:, i-1])
 
         self.paths['time'] = params['time']
         self.paths['c'] = params['c']
@@ -70,6 +75,7 @@ class qGaussian(object):
         self.paths['W'] = params['W']
         self.paths['Omg'] = params['Omg']
         self.paths['S'] = S
+        self.paths['S1'] = S1
 
     def getTime(self):
         return self.paths['time']
@@ -83,18 +89,21 @@ class qGaussian(object):
     def getS(self):
         return self.paths['S']
 
+    def getS1(self):
+        return self.paths['S1']
 
+#+ 0.5 * sigma**2 * Pq[:, i-1]**(1-q)
 stock1 = qGaussian()
 stock2 = qGaussian()
 
-stock1.generateStockPath(sigma=0.3, r=0.006, T=1, q=1.1, S_0=50, numPaths=100000, numSteps=1000)
-stock2.generateStockPath(sigma=0.3, r=0.006, T=1, q=1.4, S_0=50, numPaths=100000, numSteps=1000)
+#stock1.generateStockPath(sigma=0.3, r=0.006, T=10, q=1.1, S_0=50, numPaths=10, numSteps=100000)
+stock2.generateStockPath(sigma=0.3, r=0.06, T=0.05, q=1.4, S_0=50, numPaths=10, numSteps=100000)
 
 
 def logReturn(func):
-    df = pd.DataFrame({'time': func.getTime(),
-                       'stock price': func.getS()[0, :]})
-    df['daily log return'] = (np.log(df['stock price']/df['stock price'].shift(1)))
+    df = pd.DataFrame({'time': stock2.getTime(),
+                       'stock price': func[0, :]})
+    df['daily log return'] = np.log(df['stock price']/df['stock price'].shift(1))
     df['daily log return'] = (df['daily log return']-df['daily log return'].mean())/df['daily log return'].std() # standardization
     return df['daily log return']
 
@@ -140,3 +149,5 @@ def varPlot(numPaths, numSteps, T, q):
     plt.xlabel('Time')
     plt.ylabel('Error')
     plt.show()
+
+
