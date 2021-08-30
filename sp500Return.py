@@ -1,12 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import norm
 import seaborn as sns
 import pandas as pd
+import qGaussian
 
+numPaths = 5000
+dt = 0.005
+T = 0.45
+numSteps = int(T / dt)
 
+q = 1.6
 
-def TsallisDist(numSamples):
-    Z = np.random.normal(0.0, 1.0, [numSamples])
+p2 = qGaussian.NonGaussianBrownianMotion('qGaussian Process')
+p2.generateWiener(numPaths, numSteps, T)
+p2.generateOmega(q)
 
 
 def spReturn(start, end=None):
@@ -16,13 +24,21 @@ def spReturn(start, end=None):
         df = df.loc[start:]
     else:
         df = df.loc[start:end]
-    print(df.shape)
     df['Log return'] = np.log(df['Close']/df['Close'].shift(1))
-    df['Log return'] = (df['Log return']-df['Log return'].mean())/df['Log return'].std() #Standardization
+    mu = df['Log return'].mean()
+    sigma = df['Log return'].std()
+    df['Log return'] = (df['Log return']-mu)/sigma  # Standardization
+    x = np.linspace(np.min(df['Log return']), np.max(df['Log return']), 10000)
+    normalFit = norm.pdf(x, 0, 0.55)
     plt.figure(figsize=(8,5), dpi=400)
-    sns.histplot(df['Log return'], binwidth=0.1, kde=True, color='r', binrange=[-8, 8])
-    sns.histplot(np.random.normal(0, df['Log return'].var(), [df.shape[0]]), kde=True, binwidth=0.1, binrange=[-8, 8])
-    plt.xlim(-6, 6)
+    plt.plot(x, normalFit, color='r', label='Gaussian dist: $\mu = {}, \sigma = {}$'.format(
+        normalFit.mean(), normalFit.std()))
+    sns.kdeplot(p2.getOmg()[:, -1], color='g', label='Tsallis dist: $\mu = {}, \sigma = {}$'.format(
+        round(p2.getOmg()[:, -1].mean(), 2), round(p2.getOmg()[:, -1].std(), 2)))
+    sns.histplot(df['Log return'], stat='density', binwidth=0.1, binrange=[-5, 5], label='S&P500 index')
+    plt.xlim(-5, 5)
+    plt.xlabel('Daily log return')
+    plt.legend()
     plt.show()
 
 spReturn('2000-01-01', end=None)

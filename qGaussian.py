@@ -78,8 +78,7 @@ class ArithmeticBrownianMotion(WienerProcess):
     def getS(self):
         return self.paths['S']
 
-    def generateStockPath(self, r, sigma, S0, T):
-        dt = T / float(self.getnumSteps())
+    def generateStockPath(self, r, sigma, S0):
         S = np.zeros([self.getnumPaths(), self.getnumSteps()])
         S[:, 0] = S0
         for i in range(1, self.getnumSteps()):
@@ -117,10 +116,10 @@ class NonGaussianBrownianMotion(QGaussianProcess):
         S[:, 0] = S0
         Pq = ((1 - self.getB() * (1 - q) * self.getOmg() ** 2) ** (1 / (1 - q))) / self.getZ()
         for i in range(1, self.getnumSteps()):
-            # S[:, i] = S[:, i - 1] + S[:, i - 1] * (self.getTime()[i]-self.getTime()[i-1]) * (r + 0.5 * sigma ** 2 * Pq[:, i - 1] ** (1 - q)) + sigma * \
-            #            S[:, i - 1] * (self.getOmg()[:, i] - self.getOmg()[:, i - 1])
-            S[:, i] = S[:, i - 1] + S[:, i - 1] * r * (self.getTime()[i] - self.getTime()[i - 1]) + sigma * \
-                      S[:, i - 1] * (self.getOmg()[:, i] - self.getOmg()[:, i - 1])
+            S[:, i] = S[:, i - 1] + S[:, i - 1] * (self.getTime()[i]-self.getTime()[i-1]) * (r + 0.5 * sigma ** 2 * Pq[:, i - 1] ** (1 - q)) + sigma * \
+                       S[:, i - 1] * (self.getOmg()[:, i] - self.getOmg()[:, i - 1])
+            # S[:, i] = S[:, i - 1] + S[:, i - 1] * r * (self.getTime()[i] - self.getTime()[i - 1]) + sigma * \
+            #           S[:, i - 1] * (self.getOmg()[:, i] - self.getOmg()[:, i - 1])
         self.paths['S'] = S
 
 
@@ -169,14 +168,16 @@ def distPlot(func1, func2):
     plt.show()
 
 
-distPlot(logReturn(p1), logReturn(p2))
+#distPlot(logReturn(p1), logReturn(p2))
 
 
 def pathPlot(x, y, numPaths=20):
     plt.figure(figsize=(8, 5), dpi=500)
     for i in range(numPaths):
         plt.plot(x, y[i, :])
-    plt.title('Stock price path according to Tsallis statistics')
+    plt.title('Stock price path')
+    plt.ylabel('Price')
+    plt.xlabel('Time')
     plt.show()
 
 
