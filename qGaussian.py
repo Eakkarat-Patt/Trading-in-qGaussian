@@ -1,3 +1,8 @@
+"""
+This source code is modified from the lecture on Computational Finance taught by Dr.Lech A. Grzelak
+"""
+
+
 import numpy as np
 from scipy.special import gamma
 import matplotlib.pyplot as plt
