@@ -5,6 +5,7 @@ import pandas as pd
 import qGaussian
 
 numPaths = 10000
+numSims = 1000
 T = 1
 dt = 0.005
 numSteps = int(T / dt)
@@ -13,10 +14,11 @@ sigma = 0.5
 S0 = 50
 
 
-def pathPlot(x, y1, y2):
+def pathPlot(x, y1, y2, y3):
     plt.figure(figsize=(8, 5), dpi=500)
     plt.plot(x, y1[0, :], label='Stock price')
-    plt.plot(x, y2[0, :], label='Reservation price')
+    plt.plot(x, y2[0, :], label='Bid price')
+    plt.plot(x, y3[0, :], label='Ask price')
     plt.title('Stock price path')
     plt.ylabel('Price')
     plt.xlabel('Time')
@@ -27,16 +29,30 @@ def pathPlot(x, y1, y2):
 class InventoryStrategy(object):
     def __init__(self, name):
         self.name = name
-        self.spreadAvg = np.array([])
-        self.PnLStd = np.array([])
-        self.PnL = np.array([])
+        self.avgSpread = np.zeros([numSims, numSteps])
+        self.bid = np.zeros([numSims, numSteps])
+        self.ask = np.zeros([numSims, numSteps])
+        self.n = np.zeros([numSims, numSteps])
+        self.PnL = np.zeros([numSims, numSteps])
 
     def getProfit(self):
         return self.PnL
 
+    def getAvgSpread(self):
+        return self.avgSpread
+
+    def getInventory(self):
+        return self.n
+
+    def getBid(self):
+        return self.bid
+
+    def getAsk(self):
+        return self.ask
+
     def initializeSimulation(self, numSims, numSteps, gamma, k, A):
 
-        for i in range(1, numSims):
+        for j in range(0, numSims):
             p1 = qGaussian.ArithmeticBrownianMotion('Arithmetic Brownian Motion')
             p1.generateWiener(numPaths, numSteps, T)
             p1.generateStockPath(r, sigma, S0)
@@ -57,8 +73,8 @@ class InventoryStrategy(object):
             spread[0] = 0
             deltaB[0] = 0
             deltaA[0] = 0
-            n[0] = 0  # position
-            x[0] = 0  # wealth
+            n[0] = 0
+            x[0] = 0
             w[0] = 0
 
             for i in range(1, numSteps):
@@ -93,10 +109,12 @@ class InventoryStrategy(object):
                     x[i] = x[i - 1] - bid[i] + ask[i]
 
                 w[i] = x[i] + n[i] * S[:][i].mean()
-
-            self.spreadAvg = np.append(self.spreadAvg, spread.mean())
+            self.bid[j, :] = bid
+            self.ask[j, :] = ask
+            self.n[j, :] = n
+            self.avgSpread = np.append(self.avgSpread, spread.mean())
             self.PnL = np.append(self.PnL, w[-1])
-            self.PnLStd = np.append(self.PnLStd, w[-1])
+
 
 mm1 = InventoryStrategy('mm on ABM')
 mm1.initializeSimulation(1000, numSteps, 0.1, 1.5, 140)

@@ -128,26 +128,24 @@ class NonGaussianBrownianMotion(QGaussianProcess):
         self.paths['S'] = S
 
 
-numPaths = 10
-numSteps = 100000
-T = 0.05
-r = 0.05
-sigma = 0.5
+numPaths = 100000
+dt = 0.005
+T = 1
+numSteps = int(T / dt)
+r = 0.5
+sigma = 2
 S0 = 50
 q = 1.6
 
-
-p1 = GeometricBrownianMotion('Geometric Brownian motion')
-p2 = NonGaussianBrownianMotion('qGaussian Process')
-
-p1.generateWiener(numPaths, numSteps, T)
-p2.generateWiener(numPaths, numSteps, T)
-p2.generateOmega(q)
-
-p1.generateStockPath(r, sigma, S0)
-p2.generateStockPath(r, sigma, S0, q)
-
-
+# p1 = GeometricBrownianMotion('Geometric Brownian motion')
+# p2 = NonGaussianBrownianMotion('qGaussian Process')
+#
+# p1.generateWiener(numPaths, numSteps, T)
+# p2.generateWiener(numPaths, numSteps, T)
+# p2.generateOmega(q)
+#
+# p1.generateStockPath(r, sigma, S0)
+# p2.generateStockPath(r, sigma, S0, q)
 
 def logReturn(func):
     df = pd.DataFrame({'time': func.getTime(),
@@ -159,15 +157,15 @@ def logReturn(func):
 
 def distPlot(func1, func2):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1, binwidth=0.1, color='r', binrange=[-10, 10])
-    sns.histplot(func2, binwidth=0.1, binrange=[-10, 10])
+    sns.histplot(func1, binwidth=0.1, color='r', binrange=[-10, 10], label='Non Gaussian')
+    sns.histplot(func2, binwidth=0.1, binrange=[-10, 10],label='GBM')
     plt.xlim(-6, 6)
     plt.title('Tsallis Distribution')
     plt.show()
 
 
-#distPlot(logReturn(p1), logReturn(p2))
-
+#distPlot(logReturn(p2), logReturn(p1))
+#distPlot(p2.getOmg()[:,-1], p2.getW()[:,-1])
 
 def pathPlot(x, y, numPaths=20):
     plt.figure(figsize=(8, 5), dpi=500)
