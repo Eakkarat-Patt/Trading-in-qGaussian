@@ -4,62 +4,14 @@ import seaborn as sns
 import pandas as pd
 import qGaussian
 
-
-def generatePoisson(numPaths, numSteps, I, T):
-    t = p1.getTime()
-    X = np.zeros([numPaths, numSteps])
-    N = np.random.poisson(I * dt, [numPaths, numSteps])
-    for i in range(numSteps):
-        X[:, i] = X[:, i - 1] + N[:, i - 1]
-    paths = {'t': t, 'X': X}
-    return paths
-
-
-numPaths = 1
+numPaths = 10000
 T = 1
 dt = 0.005
 numSteps = int(T / dt)
 r = 0.05
 sigma = 0.5
 S0 = 50
-rCoeff = 1
 
-
-
-
-
-
-# qGaussian.distPlot(generatePoisson(10000, 1000, 1, 1)['X'][:, -1], None)
-
-p1 = qGaussian.ArithmeticBrownianMotion('Arithmetic Brownian Motion')
-p1.generateWiener(numPaths, numSteps, T)
-p1.generateStockPath(r, sigma, S0)
-
-def Inventory(numPaths, numSteps, I, T):
-    Nb = generatePoisson(numPaths, numSteps, I, T)
-    Na = generatePoisson(numPaths, numSteps, I, T)
-    t = Nb['t']
-    n = Nb['X'] - Na['X']
-    paths = {'t': t, 'n': n}
-    return paths
-
-
-
-def indifPrice(path, rCoeff, sigma):
-    In = Inventory(numPaths, numSteps, I, T)
-    rv = path - In['n'] * rCoeff * sigma**2 * (T-In['t'])
-    paths = {'t': In['t'], 'n': In['n'], 'rv': rv}
-    return paths
-
-
-def InventoryPlot(x, y):
-    plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(x, y[0, :], label='Inventory')
-    plt.title('Inventory vs Time')
-    plt.ylabel('Quantity')
-    plt.xlabel('Time')
-    plt.legend()
-    plt.show()
 
 def pathPlot(x, y1, y2):
     plt.figure(figsize=(8, 5), dpi=500)
@@ -110,13 +62,13 @@ class InventoryStrategy(object):
             w[0] = 0
 
             for i in range(1, numSteps):
-                rvPrice[i] = S[0][i] - n[i - 1] * gamma * (sigma ** 2) * (T - t[i])
+                rvPrice[i] = S[:][i].mean() - n[i - 1] * gamma * (sigma ** 2) * (T - t[i])
                 spread[i] = gamma * (sigma ** 2) * (T - t[i]) + (2 / gamma) * np.log(1 + (gamma / k))
                 bid[i] = rvPrice[i] - spread[i] / 2.
                 ask[i] = rvPrice[i] + spread[i] / 2.
 
-                deltaB[i] = S[0][i] - bid[i]
-                deltaA[i] = ask[i] - S[0][i]
+                deltaB[i] = S[:][i].mean() - bid[i]
+                deltaA[i] = ask[i] - S[:][i].mean()
 
                 lambdaA = A * np.exp(-k * deltaA[i])
                 ProbA = lambdaA * dt
@@ -138,16 +90,16 @@ class InventoryStrategy(object):
                     x[i] = x[i - 1]
                 if ProbB > fb and ProbA > fa:
                     n[i] = n[i - 1]
-                    x[i] = x[i - 1] - bid[i]
-                    x[i] = x[i] + ask[i]
+                    x[i] = x[i - 1] - bid[i] + ask[i]
 
-                w[i] = x[i] + n[i] * S[0][i]
+                w[i] = x[i] + n[i] * S[:][i].mean()
 
             self.spreadAvg = np.append(self.spreadAvg, spread.mean())
             self.PnL = np.append(self.PnL, w[-1])
             self.PnLStd = np.append(self.PnLStd, w[-1])
 
-
+mm1 = InventoryStrategy('mm on ABM')
+mm1.initializeSimulation(1000, numSteps, 0.1, 1.5, 140)
 
 def distPlot(func1):
     plt.figure(figsize=(8, 5), dpi=500)

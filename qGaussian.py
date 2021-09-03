@@ -128,13 +128,6 @@ class NonGaussianBrownianMotion(QGaussianProcess):
         self.paths['S'] = S
 
 
-
-def rvPrice(self, n, sigma, gamma, T):
-    t = self.paths['time']
-    r = self.paths['S1'][:, -1].mean() - n * gamma * sigma ** 2 * (T - t)
-    self.paths['r'] = r
-
-
 numPaths = 10
 numSteps = 100000
 T = 0.05
