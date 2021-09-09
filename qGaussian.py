@@ -11,7 +11,6 @@ import pandas as pd
 plt.rc('font', **{'family': 'serif', 'serif': ['Computer Modern Roman']})
 plt.rc('text', usetex=True)
 
-
 class WienerProcess(object):
     def __init__(self, name):
         self.name = name
@@ -33,6 +32,7 @@ class WienerProcess(object):
         return self.paths['W']
 
     def generateWiener(self, numPaths, numSteps, T):
+        # np.random.seed(9)
         t = np.linspace(0, T, numSteps)
         t[0] = 1e-20  # set initial t close to 0 to avoid ZeroDivisionError
         N = np.random.normal(0.0, 1.0, [numPaths, numSteps])
@@ -121,31 +121,34 @@ class NonGaussianBrownianMotion(QGaussianProcess):
         S[:, 0] = S0
         Pq = ((1 - self.getB() * (1 - q) * self.getOmg() ** 2) ** (1 / (1 - q))) / self.getZ()
         for i in range(1, self.getnumSteps()):
-            S[:, i] = S[:, i - 1] + S[:, i - 1] * (self.getTime()[i]-self.getTime()[i-1]) * (r + 0.5 * sigma ** 2 * Pq[:, i - 1] ** (1 - q)) + sigma * \
-                       S[:, i - 1] * (self.getOmg()[:, i] - self.getOmg()[:, i - 1])
+            S[:, i] = S[:, i - 1] + S[:, i - 1] * (self.getTime()[i]-self.getTime()[i-1]) * \
+                      (r + 0.5 * sigma ** 2 * Pq[:, i - 1] ** (1 - q)) + \
+                      sigma * S[:, i - 1] * (self.getOmg()[:, i] - self.getOmg()[:, i - 1])
             # S[:, i] = S[:, i - 1] + S[:, i - 1] * r * (self.getTime()[i] - self.getTime()[i - 1]) + sigma * \
             #           S[:, i - 1] * (self.getOmg()[:, i] - self.getOmg()[:, i - 1])
         self.paths['S'] = S
 
 
-numPaths = 100000
-dt = 0.005
+numPaths = 10000
+dt = 0.0001
 T = 1
 numSteps = int(T / dt)
-r = 0.5
-sigma = 2
+r = 0.05
+sigma = 0.2
 S0 = 50
-q = 1.6
+q = 1.5
 
 # p1 = GeometricBrownianMotion('Geometric Brownian motion')
-# p2 = NonGaussianBrownianMotion('qGaussian Process')
+p2 = NonGaussianBrownianMotion('qGaussian Process')
 #
 # p1.generateWiener(numPaths, numSteps, T)
-# p2.generateWiener(numPaths, numSteps, T)
-# p2.generateOmega(q)
+p2.generateWiener(numPaths, numSteps, T)
+p2.generateOmega(q)
 #
 # p1.generateStockPath(r, sigma, S0)
-# p2.generateStockPath(r, sigma, S0, q)
+p2.generateStockPath(r, sigma, S0, q)
+
+
 
 def logReturn(func):
     df = pd.DataFrame({'time': func.getTime(),
@@ -157,9 +160,10 @@ def logReturn(func):
 
 def distPlot(func1, func2):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1, binwidth=0.1, color='r', binrange=[-10, 10], label='Non Gaussian')
-    sns.histplot(func2, binwidth=0.1, binrange=[-10, 10],label='GBM')
-    plt.xlim(-6, 6)
+    sns.histplot(func1, binwidth=0.1, color='r', binrange=[-10, 10], label='Tsallis $q = {}$'.format(q), stat='density', log_scale=(False, False))
+    sns.histplot(func2, binwidth=0.1, binrange=[-10, 10],label='Gaussian', stat='density', log_scale=(False, False))
+    plt.xlim(-10, 10)
+    plt.legend()
     plt.title('Tsallis Distribution')
     plt.show()
 
@@ -175,6 +179,13 @@ def pathPlot(x, y, numPaths=20):
     plt.ylabel('Price')
     plt.xlabel('Time')
     plt.show()
+
+
+# pathPlot(p1.getTime(), p1.getS(), numPaths=1)
+# pathPlot(p2.getTime(), p2.getS(), numPaths=1)
+# distPlot(logReturn(p2), logReturn(p1))
+# distPlot(p2.getOmg()[:,-1], p2.getW()[:,-1])
+
 
 
 def varPlot(func, q):
