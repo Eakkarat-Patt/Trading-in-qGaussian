@@ -28,6 +28,7 @@ class MarketMakingStrategy(object):
         self.x = np.zeros([self.numSims, self.numSteps])
         self.w = np.zeros([self.numSims, self.numSteps])
         self.rvPrice = np.zeros([self.numSims, self.numSteps])
+        self.S = np.zeros([self.numSims, self.numSteps])
         self.muS = np.zeros([self.numSims, self.numSteps])
 
     def getProfit(self):
@@ -50,6 +51,9 @@ class MarketMakingStrategy(object):
 
     def getMuS(self):
         return self.muS
+
+    def getS(self):
+        return self.S
 
     def getnumSims(self):
         return self.numSims
@@ -129,6 +133,77 @@ class BasicInventoryStrategy(MarketMakingStrategy):
             self.n[j, :] = n
             self.spread[j, :] = spread
             self.w[j, :] = w
+            self.S[j, :] = S[j, :]
+
+class GBMInventoryStrategy(MarketMakingStrategy):
+    def __init__(self, name, numSims, numSteps):
+        MarketMakingStrategy.__init__(self, name, numSims, numSteps)
+        self.name = name
+        self.numSims = numSims
+        self.numSteps = numSteps
+
+    def initializeSimulation(self, gamma, k, A):
+        for j in range(0, self.numSims):
+            p1 = qGaussian.GeometricBrownianMotion('Geometric Brownian motion')
+            p1.generateWiener(numPaths, self.numSteps, T)
+            p1.generateStockPath(r, sigma, S0)
+            t = p1.getTime()
+            S = p1.getS()
+            spread = np.zeros([self.numSteps])
+            bid = np.zeros([self.numSteps])
+            ask = np.zeros([self.numSteps])
+            n = np.zeros([self.numSteps])
+            x = np.zeros([self.numSteps])
+            w = np.zeros([self.numSteps])
+            rvPrice = np.zeros([self.numSteps])
+
+            deltaB = np.zeros([self.numSteps])
+            deltaA = np.zeros([self.numSteps])
+
+            rvPrice[0] = S[0][0]
+            bid[0] = S[0][0]
+            ask[0] = S[0][0]
+
+            for i in range(1, self.numSteps):
+                self.muS[j, i] = S[:, i].mean()
+                rvPrice[i] = S[j, i] - n[i - 1] * gamma * S[j, i]**2 * np.exp(sigma**2 * (T - t[i]))
+                spread[i] = 2/k + gamma
+                bid[i] = rvPrice[i] - spread[i] / 2.
+                ask[i] = rvPrice[i] + spread[i] / 2.
+
+                deltaB[i] = S[j, i] - bid[i]
+                deltaA[i] = ask[i] - S[j, i]
+
+                lambdaA = A * np.exp(-k * deltaA[i])
+                ProbA = lambdaA * dt
+                fa = np.random.random()
+
+                lambdaB = A * np.exp(-k * deltaB[i])
+                ProbB = lambdaB * dt
+                fb = np.random.random()
+
+                if ProbB > fb and ProbA < fa:
+                    n[i] = n[i - 1] + 1
+                    x[i] = x[i - 1] - bid[i]
+
+                if ProbB < fb and ProbA > fa:
+                    n[i] = n[i - 1] - 1
+                    x[i] = x[i - 1] + ask[i]
+                if ProbB < fb and ProbA < fa:
+                    n[i] = n[i - 1]
+                    x[i] = x[i - 1]
+                if ProbB > fb and ProbA > fa:
+                    n[i] = n[i - 1]
+                    x[i] = x[i - 1] - bid[i] + ask[i]
+
+                w[i] = x[i] + n[i] * S[j, i]
+            self.t = t
+            self.bid[j, :] = bid
+            self.ask[j, :] = ask
+            self.n[j, :] = n
+            self.spread[j, :] = spread
+            self.w[j, :] = w
+            self.S[j, :] = S[j, :]
 
 
 class QGaussianInventoryStrategy(MarketMakingStrategy):
@@ -203,6 +278,7 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
             self.n[j, :] = n
             self.spread[j, :] = spread
             self.w[j, :] = w
+            self.S[j, :] = S[j, :]
 
 
 numPaths = 10000
@@ -219,8 +295,8 @@ k = 1.5
 A = 140
 q = 1.5
 
-mm2 = QGaussianInventoryStrategy('mm with qGaussian process', numSims, numSteps)
-mm2.initializeSimulation(gamma, k, A, q)
+mm2 = GBMInventoryStrategy('mm with qGaussian process', numSims, numSteps)
+mm2.initializeSimulation(gamma, k, A)
 
 # mm1 = BasicInventoryStrategy('mm on ABM', numSims, numSteps)
 # mm1.initializeSimulation(0.1, 1.5, 140)

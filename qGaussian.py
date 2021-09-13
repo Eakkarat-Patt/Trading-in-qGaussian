@@ -129,23 +129,23 @@ class NonGaussianBrownianMotion(QGaussianProcess):
         self.paths['S'] = S
 
 
-numPaths = 10000
-dt = 0.0001
+numPaths = 5
+dt = 0.001
 T = 1
 numSteps = int(T / dt)
 r = 0.05
 sigma = 0.2
 S0 = 50
-q = 1.5
+q = 1.3
 
-# p1 = GeometricBrownianMotion('Geometric Brownian motion')
+p1 = GeometricBrownianMotion('Geometric Brownian motion')
 p2 = NonGaussianBrownianMotion('qGaussian Process')
 #
-# p1.generateWiener(numPaths, numSteps, T)
+p1.generateWiener(numPaths, numSteps, T)
 p2.generateWiener(numPaths, numSteps, T)
 p2.generateOmega(q)
 #
-# p1.generateStockPath(r, sigma, S0)
+p1.generateStockPath(r, sigma, S0)
 p2.generateStockPath(r, sigma, S0, q)
 
 
@@ -171,10 +171,12 @@ def distPlot(func1, func2):
 #distPlot(logReturn(p2), logReturn(p1))
 #distPlot(p2.getOmg()[:,-1], p2.getW()[:,-1])
 
-def pathPlot(x, y, numPaths=20):
+def pathPlot(x, y1, y2, numPaths=20):
     plt.figure(figsize=(8, 5), dpi=500)
     for i in range(numPaths):
-        plt.plot(x, y[i, :])
+        plt.plot(x, y1[i, :])
+    for i in range(numPaths):
+        plt.plot(x, y2[i, :])
     plt.title('Stock price path')
     plt.ylabel('Price')
     plt.xlabel('Time')
