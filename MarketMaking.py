@@ -4,16 +4,7 @@ import seaborn as sns
 import qGaussian
 
 
-def pathPlot(x, y1, y2, y3):
-    plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(x, y1[6, :], label='Stock price')
-    plt.plot(x, y2[6, :], label='Bid price')
-    plt.plot(x, y3[6, :], label='Ask price')
-    plt.title('Stock price path')
-    plt.ylabel('Price')
-    plt.xlabel('Time')
-    plt.legend()
-    plt.show()
+
 
 class MarketMakingStrategy(object):
     def __init__(self, name, numSims, numSteps):
@@ -61,6 +52,9 @@ class MarketMakingStrategy(object):
     def getnumSteps(self):
         return self.numSteps
 
+    def getrvPrice(self):
+        return self.rvPrice
+
 class BasicInventoryStrategy(MarketMakingStrategy):
     """
     This market making strategy assume that the stock price processes involve according to arithmetic
@@ -73,13 +67,13 @@ class BasicInventoryStrategy(MarketMakingStrategy):
         self.numSteps = numSteps
 
     def initializeSimulation(self, gamma, k, A):
+        p1 = qGaussian.ArithmeticBrownianMotion('Arithmetic Brownian Motion')
+        p1.generateWiener(numPaths, self.numSteps, T)
+        p1.generateStockPath(r, sigma, S0)
         for j in range(0, self.numSims):
-            p1 = qGaussian.ArithmeticBrownianMotion('Arithmetic Brownian Motion')
-            p1.generateWiener(numPaths, self.numSteps, T)
-            p1.generateStockPath(r, sigma, S0)
             t = p1.getTime()
             S = p1.getS()
-            spread = np.zeros([self.numSteps])
+            spread = gamma * (sigma ** 2) * (T - t) + (2 / gamma) * np.log(1 + (gamma / k))
             bid = np.zeros([self.numSteps])
             ask = np.zeros([self.numSteps])
             n = np.zeros([self.numSteps])
@@ -90,14 +84,13 @@ class BasicInventoryStrategy(MarketMakingStrategy):
             deltaB = np.zeros([self.numSteps])
             deltaA = np.zeros([self.numSteps])
 
-            rvPrice[0] = S[0][0]
-            bid[0] = S[0][0]
-            ask[0] = S[0][0]
+            rvPrice[0] = S[j, 0]
+            bid[0] = rvPrice[0] - spread[0] / 2.
+            ask[0] = rvPrice[0] + spread[0] / 2.
 
             for i in range(1, self.numSteps):
-                #self.muS[j, i] = S[:][i].mean()
                 rvPrice[i] = S[j, i] - n[i - 1] * gamma * (sigma ** 2) * (T - t[i])
-                spread[i] = gamma * (sigma ** 2) * (T - t[i]) + (2 / gamma) * np.log(1 + (gamma / k))
+
                 bid[i] = rvPrice[i] - spread[i] / 2.
                 ask[i] = rvPrice[i] + spread[i] / 2.
 
@@ -134,6 +127,7 @@ class BasicInventoryStrategy(MarketMakingStrategy):
             self.spread[j, :] = spread
             self.w[j, :] = w
             self.S[j, :] = S[j, :]
+            self.rvPrice[j, :] = rvPrice
 
 class GBMInventoryStrategy(MarketMakingStrategy):
     def __init__(self, name, numSims, numSteps):
@@ -143,13 +137,14 @@ class GBMInventoryStrategy(MarketMakingStrategy):
         self.numSteps = numSteps
 
     def initializeSimulation(self, gamma, k, A):
+        p1 = qGaussian.GeometricBrownianMotion('Geometric Brownian motion')
+        p1.generateWiener(numPaths, self.numSteps, T)
+        p1.generateStockPath(r, sigma, S0)
         for j in range(0, self.numSims):
-            p1 = qGaussian.GeometricBrownianMotion('Geometric Brownian motion')
-            p1.generateWiener(numPaths, self.numSteps, T)
-            p1.generateStockPath(r, sigma, S0)
+
             t = p1.getTime()
             S = p1.getS()
-            spread = np.zeros([self.numSteps])
+            spread = 2/k + gamma
             bid = np.zeros([self.numSteps])
             ask = np.zeros([self.numSteps])
             n = np.zeros([self.numSteps])
@@ -160,16 +155,15 @@ class GBMInventoryStrategy(MarketMakingStrategy):
             deltaB = np.zeros([self.numSteps])
             deltaA = np.zeros([self.numSteps])
 
-            rvPrice[0] = S[0][0]
-            bid[0] = S[0][0]
-            ask[0] = S[0][0]
+            rvPrice[0] = S[j, 0]*np.exp(r*(T-t[0]))
+            bid[0] = rvPrice[0] - spread / 2.
+            ask[0] = rvPrice[0] + spread / 2.
 
             for i in range(1, self.numSteps):
-                self.muS[j, i] = S[:, i].mean()
-                rvPrice[i] = S[j, i] - n[i - 1] * gamma * S[j, i]**2 * np.exp(sigma**2 * (T - t[i]))
-                spread[i] = 2/k + gamma
-                bid[i] = rvPrice[i] - spread[i] / 2.
-                ask[i] = rvPrice[i] + spread[i] / 2.
+                rvPrice[i] = S[j, i]*np.exp(r*(T-t[i])) - n[i - 1] * gamma * S[j, i]**2 * (np.exp((2*r + sigma**2) * (T - t[i])))
+
+                bid[i] = rvPrice[i] - spread / 2.
+                ask[i] = rvPrice[i] + spread / 2.
 
                 deltaB[i] = S[j, i] - bid[i]
                 deltaA[i] = ask[i] - S[j, i]
@@ -204,6 +198,7 @@ class GBMInventoryStrategy(MarketMakingStrategy):
             self.spread[j, :] = spread
             self.w[j, :] = w
             self.S[j, :] = S[j, :]
+            self.rvPrice[j, :] = rvPrice
 
 
 class QGaussianInventoryStrategy(MarketMakingStrategy):
@@ -219,12 +214,9 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
             p1.generateWiener(numPaths, self.numSteps, T)
             p1.generateOmega(q)
             p1.generateStockPath(r, sigma, S0, q)
-            # p1 = qGaussian.GeometricBrownianMotion('GMB')
-            # p1.generateWiener(numPaths, self.numSteps, T)
-            # p1.generateStockPath(r, sigma, S0)
             t = p1.getTime()
             S = p1.getS()
-            spread = np.zeros([self.numSteps])
+            spread = 2/k + gamma
             bid = np.zeros([self.numSteps])
             ask = np.zeros([self.numSteps])
             n = np.zeros([self.numSteps])
@@ -235,16 +227,16 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
             deltaB = np.zeros([self.numSteps])
             deltaA = np.zeros([self.numSteps])
 
-            rvPrice[0] = S[0][0]
-            bid[0] = S[0][0]
-            ask[0] = S[0][0]
+            rvPrice[0] = S[j, 0]
+            bid[0] = rvPrice[0] - spread / 2.
+            ask[0] = rvPrice[0] + spread / 2.
 
             for i in range(1, self.numSteps):
                 self.muS[j, i] = S[:, i].mean()
                 rvPrice[i] = self.muS[j, i] - n[i - 1] * gamma * (S[:, i]**2).mean()
-                spread[i] = 2/k + gamma
-                bid[i] = rvPrice[i] - spread[i] / 2.
-                ask[i] = rvPrice[i] + spread[i] / 2.
+
+                bid[i] = rvPrice[i] - spread / 2.
+                ask[i] = rvPrice[i] + spread / 2.
 
                 deltaB[i] = S[j, i] - bid[i]
                 deltaA[i] = ask[i] - S[j, i]
@@ -279,6 +271,7 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
             self.spread[j, :] = spread
             self.w[j, :] = w
             self.S[j, :] = S[j, :]
+            self.rvPrice[j, :] = rvPrice
 
 
 numPaths = 10000
@@ -286,24 +279,53 @@ numSims = 1000
 T = 1
 dt = 0.005
 numSteps = int(T / dt)
-r = 0
+r = 0.02
 sigma = 0.05
 S0 = 1
 
-gamma = 0.1
-k = 1.5
-A = 140
-q = 1.5
+gamma = 0.001
+k = 100
+A = 1500
+q = 1.4
+
+# mm1 = BasicInventoryStrategy('mm on ABM', numSims, numSteps)
+# mm1.initializeSimulation(gamma, k, A)
 
 mm2 = GBMInventoryStrategy('mm with qGaussian process', numSims, numSteps)
 mm2.initializeSimulation(gamma, k, A)
+#
+# mm3 = QGaussianInventoryStrategy('mm with qGaussian process', numSims, numSteps)
+# mm3.initializeSimulation(gamma, k, A, q)
 
-# mm1 = BasicInventoryStrategy('mm on ABM', numSims, numSteps)
-# mm1.initializeSimulation(0.1, 1.5, 140)
 
 def distPlot(func1):
     plt.figure(figsize=(8, 5), dpi=500)
     sns.histplot(func1, binwidth=2, color='r')
     plt.xlim([-50, 150])
     plt.title('Profit Distribution')
+    plt.show()
+
+
+def pathPlot(x, y1, y2, y3):
+    plt.figure(figsize=(8, 5), dpi=500)
+    plt.plot(x, y1[19, :], label='Stock price')
+    plt.plot(x, y2[19, :], label='Bid price')
+    plt.plot(x, y3[19, :], label='Ask price')
+    plt.xlim([0.0, x[-1]])
+    plt.title('Stock price path')
+    plt.ylabel('Price')
+    plt.xlabel('Time')
+    plt.legend()
+    plt.show()
+
+
+def pathPlot2(x, y1, y2):
+    plt.figure(figsize=(8, 5), dpi=500)
+    plt.plot(x, y1[16, :], label='Stock price')
+    plt.plot(x, y2[16, :], label='Reservation price')
+    plt.xlim([0.0, x[-1]])
+    plt.title('Stock price path')
+    plt.ylabel('Price')
+    plt.xlabel('Time')
+    plt.legend()
     plt.show()

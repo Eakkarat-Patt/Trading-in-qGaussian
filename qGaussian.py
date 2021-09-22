@@ -136,7 +136,7 @@ numSteps = int(T / dt)
 r = 0.05
 sigma = 0.2
 S0 = 50
-q = 1.3
+q = 1.011
 
 p1 = GeometricBrownianMotion('Geometric Brownian motion')
 p2 = NonGaussianBrownianMotion('qGaussian Process')
@@ -176,7 +176,7 @@ def pathPlot(x, y1, y2, numPaths=20):
     for i in range(numPaths):
         plt.plot(x, y1[i, :])
     for i in range(numPaths):
-        plt.plot(x, y2[i, :])
+        plt.plot(x, y2[i, :], linestyle='--')
     plt.title('Stock price path')
     plt.ylabel('Price')
     plt.xlabel('Time')
