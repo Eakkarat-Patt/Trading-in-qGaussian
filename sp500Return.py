@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import norm
 import seaborn as sns
 import pandas as pd
-import qGaussian
+import StockModels
 
 numPaths = 5000
 dt = 0.005
@@ -12,7 +12,7 @@ numSteps = int(T / dt)
 
 q = 1.6
 
-p2 = qGaussian.NonGaussianBrownianMotion('qGaussian Process')
+p2 = StockModels.NonGaussianBrownianMotion('qGaussian Process')
 p2.generateWiener(numPaths, numSteps, T)
 p2.generateOmega(q)
 

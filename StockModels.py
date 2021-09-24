@@ -12,12 +12,8 @@ plt.rc('font', **{'family': 'serif', 'serif': ['Computer Modern Roman']})
 plt.rc('text', usetex=True)
 
 class WienerProcess(object):
-    def __init__(self, name):
-        self.name = name
+    def __init__(self):
         self.paths = {}
-
-    def getProcessName(self):
-        return self.name
 
     def getnumPaths(self):
         return self.paths['W'].shape[0]
@@ -31,10 +27,10 @@ class WienerProcess(object):
     def getW(self):
         return self.paths['W']
 
-    def generateWiener(self, numPaths, numSteps, T):
+    def generateWiener(self, numPaths, numSteps, t0, T):
         # np.random.seed(9)
-        t = np.linspace(0, T, numSteps)
-        t[0] = 1e-20  # set initial t close to 0 to avoid ZeroDivisionError
+        t = np.linspace(t0, T, numSteps)
+        #t[0] = 1e-20  # set initial t close to 0 to avoid ZeroDivisionError
         N = np.random.normal(0.0, 1.0, [numPaths, numSteps])
         W = np.zeros([numPaths, numSteps])
         for i in range(1, numSteps):
@@ -46,8 +42,8 @@ class WienerProcess(object):
 
 
 class QGaussianProcess(WienerProcess):
-    def __init__(self, name):
-        WienerProcess.__init__(self, name)
+    def __init__(self):
+        WienerProcess.__init__(self)
 
     def getc(self):
         return self.paths['c']
@@ -76,9 +72,8 @@ class QGaussianProcess(WienerProcess):
 
 
 class ArithmeticBrownianMotion(WienerProcess):
-    def __init__(self, name):
-        WienerProcess.__init__(self, name)
-        self.name = name
+    def __init__(self):
+        WienerProcess.__init__(self)
 
     def getS(self):
         return self.paths['S']
@@ -92,9 +87,8 @@ class ArithmeticBrownianMotion(WienerProcess):
 
 
 class GeometricBrownianMotion(WienerProcess):
-    def __init__(self, name):
-        WienerProcess.__init__(self, name)
-        self.name = name
+    def __init__(self):
+        WienerProcess.__init__(self)
 
     def getS(self):
         return self.paths['S']
@@ -109,9 +103,8 @@ class GeometricBrownianMotion(WienerProcess):
 
 
 class NonGaussianBrownianMotion(QGaussianProcess):
-    def __init__(self, name):
-        QGaussianProcess.__init__(self, name)
-        self.name = name
+    def __init__(self):
+        QGaussianProcess.__init__(self)
 
     def getS(self):
         return self.paths['S']
@@ -129,24 +122,24 @@ class NonGaussianBrownianMotion(QGaussianProcess):
         self.paths['S'] = S
 
 
-numPaths = 5
-dt = 0.001
-T = 1
-numSteps = int(T / dt)
-r = 0.05
-sigma = 0.2
-S0 = 50
-q = 1.011
+# numPaths = 5
+# dt = 0.001
+# T = 1
+# numSteps = int(T / dt)
+# r = 0.05
+# sigma = 0.2
+# S0 = 50
+# q = 1.011
 
-p1 = GeometricBrownianMotion('Geometric Brownian motion')
-p2 = NonGaussianBrownianMotion('qGaussian Process')
-#
-p1.generateWiener(numPaths, numSteps, T)
-p2.generateWiener(numPaths, numSteps, T)
-p2.generateOmega(q)
-#
-p1.generateStockPath(r, sigma, S0)
-p2.generateStockPath(r, sigma, S0, q)
+# p1 = GeometricBrownianMotion()
+# p2 = NonGaussianBrownianMotion()
+# #
+# p1.generateWiener(numPaths, numSteps, T)
+# p2.generateWiener(numPaths, numSteps, T)
+# p2.generateOmega(q)
+# #
+# p1.generateStockPath(r, sigma, S0)
+# p2.generateStockPath(r, sigma, S0, q)
 
 
 

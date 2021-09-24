@@ -1,14 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import qGaussian
+import StockModels
 
 
 
 
 class MarketMakingStrategy(object):
-    def __init__(self, name, numSims, numSteps):
-        self.name = name
+    def __init__(self, numSims, numSteps):
         self.numSims = numSims
         self.numSteps = numSteps
         self.t = np.zeros([self.numSteps])
@@ -57,17 +56,16 @@ class MarketMakingStrategy(object):
 
 class BasicInventoryStrategy(MarketMakingStrategy):
     """
-    This market making strategy assume that the stock price processes involve according to arithmetic
+    This market making strategy assume that the stock price processes evolve according to arithmetic
     Brownian motion (Wiener process)
     """
-    def __init__(self, name, numSims, numSteps):
-        MarketMakingStrategy.__init__(self, name, numSims, numSteps)
-        self.name = name
+    def __init__(self, numSims, numSteps):
+        MarketMakingStrategy.__init__(self, numSims, numSteps)
         self.numSims = numSims
         self.numSteps = numSteps
 
     def initializeSimulation(self, gamma, k, A):
-        p1 = qGaussian.ArithmeticBrownianMotion('Arithmetic Brownian Motion')
+        p1 = StockModels.ArithmeticBrownianMotion()
         p1.generateWiener(numPaths, self.numSteps, T)
         p1.generateStockPath(r, sigma, S0)
         for j in range(0, self.numSims):
@@ -130,14 +128,13 @@ class BasicInventoryStrategy(MarketMakingStrategy):
             self.rvPrice[j, :] = rvPrice
 
 class GBMInventoryStrategy(MarketMakingStrategy):
-    def __init__(self, name, numSims, numSteps):
-        MarketMakingStrategy.__init__(self, name, numSims, numSteps)
-        self.name = name
+    def __init__(self, numSims, numSteps):
+        MarketMakingStrategy.__init__(self, numSims, numSteps)
         self.numSims = numSims
         self.numSteps = numSteps
 
     def initializeSimulation(self, gamma, k, A):
-        p1 = qGaussian.GeometricBrownianMotion('Geometric Brownian motion')
+        p1 = StockModels.GeometricBrownianMotion()
         p1.generateWiener(numPaths, self.numSteps, T)
         p1.generateStockPath(r, sigma, S0)
         for j in range(0, self.numSims):
@@ -202,20 +199,17 @@ class GBMInventoryStrategy(MarketMakingStrategy):
 
 
 class QGaussianInventoryStrategy(MarketMakingStrategy):
-    def __init__(self, name, numSims, numSteps):
-        MarketMakingStrategy.__init__(self, name, numSims, numSteps)
-        self.name = name
+    def __init__(self, numSims, numSteps):
+        MarketMakingStrategy.__init__(self, numSims, numSteps)
         self.numSims = numSims
         self.numSteps = numSteps
 
     def initializeSimulation(self, gamma, k, A, q):
+        mainPath = StockModels.NonGaussianBrownianMotion()
+        mainPath.generateWiener(self.numSims, self.numSteps, T)
+        mainPath.generateOmega(q)
+        mainPath.generateStockPath(r, sigma, S0, q)
         for j in range(0, self.numSims):
-            p1 = qGaussian.NonGaussianBrownianMotion('Non Gaussian Geometric Brownian motion')
-            p1.generateWiener(numPaths, self.numSteps, T)
-            p1.generateOmega(q)
-            p1.generateStockPath(r, sigma, S0, q)
-            t = p1.getTime()
-            S = p1.getS()
             spread = 2/k + gamma
             bid = np.zeros([self.numSteps])
             ask = np.zeros([self.numSteps])
