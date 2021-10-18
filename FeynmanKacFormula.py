@@ -11,7 +11,6 @@ class FeynmanKacFormula(object):
         self.conditionalExpectationS2 = np.zeros([self.numSteps])
         self.conditionalVarianceS = np.zeros([self.numSteps])
         self.mainPath = np.zeros([self.numSteps])
-        self.Stest = np.zeros([self.numSteps])
 
     def getConditionalExpectationS(self):
         return self.conditionalExpectationS
@@ -35,13 +34,13 @@ class FeynmanKacFormula(object):
         mainPath.generateWiener(1, self.numSteps, t0, T)
         mainPath.generateOmega(q)
         mainPath.generateStockPath(r, sigma, S0, q)
-        self.mainPath = mainPath.getS()
+        self.mainPath = mainPath.getS()[0, :]
         self.t = mainPath.getTime()
         for i in range(0, self.numSteps):
             p1 = StockModels.NonGaussianBrownianMotion()
             p1.generateWiener(self.numPaths, self.numSteps-i, self.getTime()[i], T)
             p1.generateOmega(q)
-            p1.generateStockPath(r, sigma, self.getMainPath()[0, i], q)
+            p1.generateStockPath(r, sigma, self.getMainPath()[i], q)
             self.conditionalExpectationS[i] = p1.getS()[:, -1].mean()
             self.conditionalExpectationS2[i] = (p1.getS()[:, -1]**2).mean()
             self.conditionalVarianceS[i] = p1.getS()[:, -1].std()**2

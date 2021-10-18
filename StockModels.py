@@ -28,7 +28,6 @@ class WienerProcess(object):
         return self.paths['W']
 
     def generateWiener(self, numPaths, numSteps, t0, T):
-        # np.random.seed(9)
         t = np.linspace(t0, T, numSteps)
         #t[0] = 1e-20  # set initial t close to 0 to avoid ZeroDivisionError
         N = np.random.normal(0.0, 1.0, [numPaths, numSteps])
@@ -41,107 +40,116 @@ class WienerProcess(object):
         self.paths['W'] = W
 
 
-class QGaussianProcess(WienerProcess):
-    def __init__(self):
-        WienerProcess.__init__(self)
+class StockPricesModel(object):
+    def __init__(self, noise):
+        self.S = np.zeros([noise.getW().shape[0], noise.getW().shape[1]])
+        self.W = noise.getW()
+        self.t = noise.getTime()
 
-    def getc(self):
-        return self.paths['c']
+    def GetS(self):
+        return self.S
 
-    def getB(self):
-        return self.paths['B']
+    def GetW(self):
+        return self.W
 
-    def getZ(self):
-        return self.paths['Z']
+    def GetNumPaths(self):
+        return self.W.shape[0]
 
-    def getOmg(self):
-        return self.paths['Omg']
+    def GetNumSteps(self):
+        return self.W.shape[1]
 
-    def generateOmega(self, q):
-        c = (np.pi * gamma(1 / (q - 1) - 0.5) ** 2) / ((q - 1) * gamma(1 / (q - 1)) ** 2)
-        B = c ** ((1 - q) / (3 - q)) * ((2 - q) * (3 - q) * self.getTime()) ** (-2 / (3 - q))
-        Z = ((2 - q) * (3 - q) * c * self.getTime()) ** (1 / (3 - q))
-        Omg = np.zeros([self.getnumPaths(), self.getnumSteps()])
-        for i in range(1, self.getnumSteps()):
-            Omg[:, i] = Omg[:, i - 1] + ((1 - B[i - 1] * (1 - q) * Omg[:, i - 1] ** 2) ** 0.5 * (self.getW()[:, i] -
-                                                        self.getW()[:, i - 1])) / (Z[i - 1] ** ((1 - q) / 2))
-        self.paths['c'] = c
-        self.paths['B'] = B
-        self.paths['Z'] = Z
-        self.paths['Omg'] = Omg
+    def GetTime(self):
+        return self.t
 
 
-class ArithmeticBrownianMotion(WienerProcess):
-    def __init__(self):
-        WienerProcess.__init__(self)
-
-    def getS(self):
-        return self.paths['S']
+class ArithmeticBrownianMotion(StockPricesModel):
+    def __init__(self, noise):
+        StockPricesModel.__init__(self, noise)
 
     def generateStockPath(self, r, sigma, S0):
-        S = np.zeros([self.getnumPaths(), self.getnumSteps()])
-        S[:, 0] = S0
-        for i in range(1, self.getnumSteps()):
-            S[:, i] = S[:, i-1] + r * (self.getTime()[i]-self.getTime()[i-1]) + sigma * (self.getW()[:, i] - self.getW()[:, i-1])
-        self.paths['S'] = S
+        self.S[:, 0] = S0
+        for i in range(1, self.GetNumSteps()):
+            self.S[:, i] = self.S[:, i-1] + r * (self.GetTime()[i]-self.GetTime()[i-1])\
+                           + sigma * (self.GetW()[:, i] - self.GetW()[:, i-1])
 
 
-class GeometricBrownianMotion(WienerProcess):
-    def __init__(self):
-        WienerProcess.__init__(self)
-
-    def getS(self):
-        return self.paths['S']
+class GeometricBrownianMotion(StockPricesModel):
+    def __init__(self, noise):
+        StockPricesModel.__init__(self, noise)
 
     def generateStockPath(self, r, sigma, S0):
-        S = np.zeros([self.getnumPaths(), self.getnumSteps()])
-        S[:, 0] = S0
-        for i in range(1, self.getnumSteps()):
-            S[:, i] = S[:, i - 1] + r * S[:, i - 1] * (self.getTime()[i]-self.getTime()[i-1]) + sigma * S[:, i - 1] * \
-                      (self.getW()[:, i] - self.getW()[:, i - 1])
-        self.paths['S'] = S
+        self.S[:, 0] = S0
+        for i in range(1, self.GetNumSteps()):
+            self.S[:, i] = self.S[:, i - 1] * np.exp((r - 0.5 * sigma**2)*(self.GetTime()[i]-self.GetTime()[i-1]) +
+                                                     sigma * (self.GetW()[:, i] - self.GetW()[:, i-1]))
 
 
-class NonGaussianBrownianMotion(QGaussianProcess):
-    def __init__(self):
-        QGaussianProcess.__init__(self)
+class GeneralizedBrownianMotion(StockPricesModel):
+    def __init__(self, noise):
+        StockPricesModel.__init__(self, noise)
+        self.c = 0
+        self.B = np.zeros([self.GetNumSteps()])
+        self.Z = np.zeros([self.GetNumSteps()])
+        self.Pq = np.zeros([self.GetNumPaths(), self.GetNumSteps()])
+        self.Omg = np.zeros([self.GetNumPaths(), self.GetNumSteps()])
 
-    def getS(self):
-        return self.paths['S']
+    def Getc(self):
+        return self.c
+
+    def GetB(self):
+        return self.B
+
+    def GetZ(self):
+        return self.Z
+
+    def GetOmg(self):
+        return self.Omg
 
     def generateStockPath(self, r, sigma, S0, q):
-        S = np.zeros([self.getnumPaths(), self.getnumSteps()])
-        S[:, 0] = S0
-        Pq = ((1 - self.getB() * (1 - q) * self.getOmg() ** 2) ** (1 / (1 - q))) / self.getZ()
-        for i in range(1, self.getnumSteps()):
-            S[:, i] = S[:, i - 1] + S[:, i - 1] * (self.getTime()[i]-self.getTime()[i-1]) * \
-                      (r + 0.5 * sigma ** 2 * Pq[:, i - 1] ** (1 - q)) + \
-                      sigma * S[:, i - 1] * (self.getOmg()[:, i] - self.getOmg()[:, i - 1])
-            # S[:, i] = S[:, i - 1] + S[:, i - 1] * r * (self.getTime()[i] - self.getTime()[i - 1]) + sigma * \
-            #           S[:, i - 1] * (self.getOmg()[:, i] - self.getOmg()[:, i - 1])
-        self.paths['S'] = S
+        self.c = (np.pi * gamma(1 / (q - 1) - 0.5) ** 2) / ((q - 1) * gamma(1 / (q - 1)) ** 2)
+        self.B = self.c ** ((1 - q) / (3 - q)) * ((2 - q) * (3 - q) * self.GetTime()) ** (-2 / (3 - q))
+        self.Z = ((2 - q) * (3 - q) * self.c * self.GetTime()) ** (1 / (3 - q))
+        self.S[:, 0] = S0
+
+        for i in range(1, self.GetNumSteps()):
+            self.Omg[:, i] = self.Omg[:, i - 1] + ((1 - self.GetB()[i - 1] * (1 - q) * self.Omg[:, i - 1] ** 2) ** 0.5
+                                                   * (self.GetW()[:, i] - self.GetW()[:, i - 1]))\
+                                                    / (self.GetZ()[i - 1] ** ((1 - q) / 2))
+
+            self.Pq[:, i] = ((1 - self.GetB()[i] * (1 - q) * self.GetOmg()[:, i] ** 2) ** (1 / (1 - q))) / self.GetZ()[i]
+
+            self.S[:, i] = self.S[:, i - 1] + self.S[:, i - 1] * (self.GetTime()[i]-self.GetTime()[i-1])\
+                           * (r + 0.5 * sigma ** 2 * self.Pq[:, i - 1] ** (1 - q)) + sigma * self.S[:, i - 1]\
+                           * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
 
 
-# numPaths = 5
-# dt = 0.001
-# T = 1
-# numSteps = int(T / dt)
-# r = 0.05
-# sigma = 0.2
-# S0 = 50
-# q = 1.011
-
+numPaths = 10
+dt = 0.001
+t0 = 1e-20
+T = 1
+numSteps = int(T / dt)
+r = 0.05
+sigma = 0.2
+S0 = 50
+q = 1.6
+#
 # p1 = GeometricBrownianMotion()
-# p2 = NonGaussianBrownianMotion()
-# #
-# p1.generateWiener(numPaths, numSteps, T)
-# p2.generateWiener(numPaths, numSteps, T)
-# p2.generateOmega(q)
-# #
+# p1.generateWiener(numPaths, numSteps, t0, T)
 # p1.generateStockPath(r, sigma, S0)
+#
+# p2 = NonGaussianBrownianMotion()
+# p2.generateWiener(numPaths, numSteps, t0, T)
+# p2.generateOmega(q)
 # p2.generateStockPath(r, sigma, S0, q)
 
+w1 = WienerProcess()
+w1.generateWiener(numPaths, numSteps, t0, T)
 
+p1 = GeometricBrownianMotion(w1)
+p1.generateStockPath(r, sigma, S0)
+
+p2 = GeneralizedBrownianMotion(w1)
+p2.generateStockPath(r, sigma, S0, 1.1)
 
 def logReturn(func):
     df = pd.DataFrame({'time': func.getTime(),
@@ -153,8 +161,8 @@ def logReturn(func):
 
 def distPlot(func1, func2):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1, binwidth=0.1, color='r', binrange=[-10, 10], label='Tsallis $q = {}$'.format(q), stat='density', log_scale=(False, False))
-    sns.histplot(func2, binwidth=0.1, binrange=[-10, 10],label='Gaussian', stat='density', log_scale=(False, False))
+    sns.histplot(func1, binwidth=0.2, color='r', binrange=[-5, 5], label='Tsallis$', stat='density', log_scale=(False, False))
+    sns.histplot(func2, binwidth=0.2, binrange=[-5, 5],label='Gaussian', stat='density', log_scale=(False, False))
     plt.xlim(-10, 10)
     plt.legend()
     plt.title('Tsallis Distribution')
@@ -164,15 +172,26 @@ def distPlot(func1, func2):
 #distPlot(logReturn(p2), logReturn(p1))
 #distPlot(p2.getOmg()[:,-1], p2.getW()[:,-1])
 
-def pathPlot(x, y1, y2, numPaths=20):
+def pathPlot(x, y1, numPaths=20):
     plt.figure(figsize=(8, 5), dpi=500)
     for i in range(numPaths):
         plt.plot(x, y1[i, :])
-    for i in range(numPaths):
-        plt.plot(x, y2[i, :], linestyle='--')
     plt.title('Stock price path')
     plt.ylabel('Price')
     plt.xlabel('Time')
+    plt.show()
+
+
+def pathPlot2(x, y1, y2):
+    plt.figure(figsize=(8, 5), dpi=500)
+    plt.plot(x, y1[0, :], label='GBM')
+    plt.plot(x, y2[0, :], label='Generalized GBM q = {}'.format(q))
+    plt.xlim([0.0, x[-1]])
+    plt.ylim([46, 70])
+    plt.title('Stock price path')
+    plt.ylabel('Price')
+    plt.xlabel('Time')
+    plt.legend()
     plt.show()
 
 
@@ -183,27 +202,27 @@ def pathPlot(x, y1, y2, numPaths=20):
 
 
 
-def varPlot(func, q):
-    exact = TsallisVar(q, func.getTime())
-    emp = varOmg(func)
-    err = (exact - emp) * 100 / exact
-    plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(func.getTime(), err)
-    plt.title('Variance percentage error')
-    plt.xlabel('Time')
-    plt.ylabel('Error')
-    plt.show()
-
-
-def TsallisVar(q, t):
-    c = (np.pi * gamma(1 / (q - 1) - 0.5) ** 2) / ((q - 1) * gamma(1 / (q - 1)) ** 2)
-    B = c ** ((1 - q) / (3 - q)) * ((2 - q) * (3 - q) * t) ** (-2 / (3 - q))
-    return 1 / ((5 - 3 * q) * B)
-
-
-def varOmg(func):
-
-    var_t = np.zeros([func.getnumSteps()])
-    for i in range(1, func.getnumSteps()):
-        var_t[i] = func.getOmg()[:, i].var()
-    return var_t
+# def varPlot(func, q):
+#     exact = TsallisVar(q, func.getTime())
+#     emp = varOmg(func)
+#     err = (exact - emp) * 100 / exact
+#     plt.figure(figsize=(8, 5), dpi=500)
+#     plt.plot(func.getTime(), err)
+#     plt.title('Variance percentage error')
+#     plt.xlabel('Time')
+#     plt.ylabel('Error')
+#     plt.show()
+#
+#
+# def TsallisVar(q, t):
+#     c = (np.pi * gamma(1 / (q - 1) - 0.5) ** 2) / ((q - 1) * gamma(1 / (q - 1)) ** 2)
+#     B = c ** ((1 - q) / (3 - q)) * ((2 - q) * (3 - q) * t) ** (-2 / (3 - q))
+#     return 1 / ((5 - 3 * q) * B)
+#
+#
+# def varOmg(func):
+#
+#     var_t = np.zeros([func.getnumSteps()])
+#     for i in range(1, func.getnumSteps()):
+#         var_t[i] = func.getOmg()[:, i].var()
+#     return var_t
