@@ -8,9 +8,10 @@ import FeynmanKacFormula as fk
 
 
 class MarketMakingStrategy(object):
-    def __init__(self, numSims, numSteps):
+    def __init__(self, noise, numSims):
+        self.noise = noise
         self.numSims = numSims
-        self.numSteps = numSteps
+        self.numSteps = self.noise.getW().shape[1]
         self.t = np.zeros([self.numSteps])
         self.spread = np.zeros([self.numSims, self.numSteps])
         self.bid = np.zeros([self.numSims, self.numSteps])
@@ -64,19 +65,16 @@ class BasicInventoryStrategy(MarketMakingStrategy):
     This market making strategy assume that the stock price processes evolve according to arithmetic
     Brownian motion (Wiener process)
     """
-    def __init__(self, numSims, numSteps):
-        MarketMakingStrategy.__init__(self, numSims, numSteps)
-        self.numSims = numSims
-        self.numSteps = numSteps
+    def __init__(self, noise, numSims):
+        MarketMakingStrategy.__init__(self, noise, numSims)
 
-    def initializeSimulation(self, gamma, k, A):
-        p1 = StockModels.ArithmeticBrownianMotion()
-        p1.generateWiener(numPaths, self.numSteps, t0, T)
+    def initializeSimulation(self, r, sigma, S0, alpha, k, A):
+        p1 = StockModels.ArithmeticBrownianMotion(self.noise)
         p1.generateStockPath(r, sigma, S0)
         for j in range(0, self.numSims):
-            t = p1.getTime()
-            S = p1.getS()
-            spread = gamma * (sigma ** 2) * (T - t) + (2 / gamma) * np.log(1 + (gamma / k))
+            t = p1.GetTime()
+            S = p1.GetS()
+            spread = alpha * (sigma ** 2) * (T - t) + (2 / alpha) * np.log(1 + (alpha / k))
             bid = np.zeros([self.numSteps])
             ask = np.zeros([self.numSteps])
             n = np.zeros([self.numSteps])
@@ -92,7 +90,7 @@ class BasicInventoryStrategy(MarketMakingStrategy):
             ask[0] = rvPrice[0] + spread[0] / 2.
 
             for i in range(1, self.numSteps):
-                rvPrice[i] = S[j, i] - n[i - 1] * gamma * (sigma ** 2) * (T - t[i])
+                rvPrice[i] = S[j, i] - n[i - 1] * alpha * (sigma ** 2) * (T - t[i])
 
                 bid[i] = rvPrice[i] - spread[i] / 2.
                 ask[i] = rvPrice[i] + spread[i] / 2.
@@ -133,21 +131,18 @@ class BasicInventoryStrategy(MarketMakingStrategy):
             self.rvPrice[j, :] = rvPrice
 
 class GBMInventoryStrategy(MarketMakingStrategy):
-    def __init__(self, numSims, numSteps):
-        MarketMakingStrategy.__init__(self, numSims, numSteps)
-        self.numSims = numSims
-        self.numSteps = numSteps
+    def __init__(self, noise, numSims):
+        MarketMakingStrategy.__init__(self, noise, numSims)
 
-    def initializeSimulation(self, gamma, k, A):
-        p1 = StockModels.GeometricBrownianMotion()
-        p1.generateWiener(numPaths, self.numSteps, t0, T)
+    def initializeSimulation(self, r, sigma, S0, alpha, k, A):
+        p1 = StockModels.GeometricBrownianMotion(self.noise)
         p1.generateStockPath(r, sigma, S0)
-        t = p1.getTime()
-        S = p1.getS()
+        t = p1.GetTime()
+        S = p1.GetS()
         self.ConditionalExpectationSGivenTime = S * np.exp(r * (T-t))
         self.ConditionalExpectationS2GivenTime = S**2 * (np.exp((2 * r + sigma**2) * (T - t)))
         for j in range(0, self.numSims):
-            spread = 2/k + gamma
+            spread = 2 / k + alpha
             bid = np.zeros([self.numSteps])
             ask = np.zeros([self.numSteps])
             n = np.zeros([self.numSteps])
@@ -162,10 +157,8 @@ class GBMInventoryStrategy(MarketMakingStrategy):
             bid[0] = rvPrice[0] - spread / 2.
             ask[0] = rvPrice[0] + spread / 2.
 
-
-
             for i in range(1, self.numSteps):
-                rvPrice[i] = self.GetConditionalExpectationSGivenTime()[j, i] - n[i - 1] * gamma * \
+                rvPrice[i] = self.GetConditionalExpectationSGivenTime()[j, i] - n[i - 1] * alpha * \
                              self.GetConditionalExpectationS2GivenTime()[j, i]
 
                 bid[i] = rvPrice[i] - spread / 2.
@@ -208,22 +201,18 @@ class GBMInventoryStrategy(MarketMakingStrategy):
 
 
 class QGaussianInventoryStrategy(MarketMakingStrategy):
-    def __init__(self, numSims, numSteps):
-        MarketMakingStrategy.__init__(self, numSims, numSteps)
-        self.numSims = numSims
-        self.numSteps = numSteps
+    def __init__(self, noise, numSims):
+        MarketMakingStrategy.__init__(self, noise, numSims)
 
-    def initializeSimulation(self, gamma, k, A, r, sigma, S0, q, t0, T):
-
-
+    def initializeSimulation(self, r, sigma, S0, q, alpha, k, A, t0, T, fkNumPaths):
         for j in range(0, self.numSims):
-            f1 = fk.FeynmanKacFormula(numPaths, numSteps)
+            f1 = fk.FeynmanKacFormula(fkNumPaths, self.numSteps)
             f1.generatePath(r, sigma, S0, q, t0, T)
             self.ConditionalExpectationSGivenTime[j, :] = f1.getConditionalExpectationS()
             self.ConditionalExpectationS2GivenTime[j, :] = f1.getConditionalExpectationS2()
             S = f1.getMainPath()
             t = f1.getTime()
-            spread = 2/k + gamma
+            spread = 2 / k + alpha
             bid = np.zeros([self.numSteps])
             ask = np.zeros([self.numSteps])
             n = np.zeros([self.numSteps])
@@ -238,10 +227,8 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
             bid[0] = rvPrice[0] - spread / 2.
             ask[0] = rvPrice[0] + spread / 2.
 
-
-
             for i in range(1, self.numSteps):
-                rvPrice[i] = self.GetConditionalExpectationSGivenTime()[j, i] - n[i - 1] * gamma * \
+                rvPrice[i] = self.GetConditionalExpectationSGivenTime()[j, i] - n[i - 1] * alpha * \
                              self.GetConditionalExpectationS2GivenTime()[j, i]
 
                 bid[i] = rvPrice[i] - spread / 2.
@@ -284,7 +271,8 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
 
 
 numPaths = 1000
-numSims = 1
+numSims = 10
+fkNumPaths = 1000
 t0 = 1e-20
 T = 1
 dt = 0.005
@@ -293,19 +281,22 @@ r = 0.002
 sigma = 0.05
 S0 = 50
 
-gamma = 0.0001
+alpha = 0.0001
 k = 1.2
 A = 200
 q = 1.4
 
-# mm1 = BasicInventoryStrategy('mm on ABM', numSims, numSteps)
-# mm1.initializeSimulation(gamma, k, A)
+W = StockModels.WienerProcess()
+W.generateWiener(numPaths, numSteps, t0, T)
+# mm1 = BasicInventoryStrategy(w, numSims)
+# mm1.initializeSimulation(r, sigma, S0, alpha, k, A)
 
-mm2 = GBMInventoryStrategy(numSims, numSteps)
-mm2.initializeSimulation(gamma, k, A)
-# #
-mm3 = QGaussianInventoryStrategy(numSims, numSteps)
-mm3.initializeSimulation(gamma, k, A, r, sigma, S0, q, t0, T)
+# mm2 = GBMInventoryStrategy(w, numSims)
+# mm2.initializeSimulation(r, sigma, S0, alpha, k, A)
+
+
+mm3 = QGaussianInventoryStrategy(W, numSims)
+mm3.initializeSimulation(r, sigma, S0, q, alpha, k, A, t0, T, fkNumPaths)
 
 
 def distPlot(func1):
