@@ -160,6 +160,7 @@ p4.generateStockPath(r, sigma, S0, 1.4)
 p5 = GeneralizedBrownianMotion(w1)
 p5.generateStockPath(r, sigma, S0, 1.6)
 
+
 def logReturn(func1):
     df = pd.DataFrame({'time': func1.GetTime(),
                        'stock price': func1.GetS()[0, :]})
@@ -176,6 +177,7 @@ def distPlot(func1, func2, logScale=False):
     plt.title('Terminal Time Stock Price Distribution')
     plt.show()
 
+
 def ReturnDistributionPlot(func1, func2, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
     sns.histplot(func1, binwidth=0.2, color='r', binrange=[-6, 6], label='Tsallis q = 1.011', stat='density', log_scale=(False, logScale))
@@ -184,6 +186,7 @@ def ReturnDistributionPlot(func1, func2, logScale=False):
     plt.legend()
     plt.title('Log return distribution')
     plt.show()
+
 
 def pathPlot(x, y1, numPaths=20):
     plt.figure(figsize=(8, 5), dpi=500)

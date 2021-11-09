@@ -5,10 +5,12 @@ import StockModels
 import FeynmanKacFormula as fk
 import pandas as pd
 
+
 def OrderArrival(numPaths, numSteps):
     fa = np.random.random([numPaths, numSteps])
     fb = np.random.random([numPaths, numSteps])
     return np.array([fa, fb])
+
 
 class MarketMakingStrategy(object):
     def __init__(self, noise, numSims):
