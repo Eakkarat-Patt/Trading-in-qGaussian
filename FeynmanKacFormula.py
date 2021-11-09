@@ -3,14 +3,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class FeynmanKacFormula(object):
-    def __init__(self, numPaths, numSteps):
-        self.numPaths = numPaths
-        self.numSteps = numSteps
+    def __init__(self, noise, numPaths):
+        self.noise = noise
+        self.numMainPaths = noise.getW().shape[0]
+        self.numPaths = numPaths  # number of path generated for calculating conditional expectation of price given time at each time steps
+        self.numSteps = noise.getTime().shape[0]
         self.t = np.zeros([self.numSteps])
-        self.conditionalExpectationS = np.zeros([self.numSteps])
-        self.conditionalExpectationS2 = np.zeros([self.numSteps])
-        self.conditionalVarianceS = np.zeros([self.numSteps])
-        self.mainPath = np.zeros([self.numSteps])
+        self.conditionalExpectationS = np.zeros([self.numMainPaths, self.numSteps])
+        self.conditionalExpectationS2 = np.zeros([self.numMainPaths, self.numSteps])
+        self.conditionalVarianceS = np.zeros([self.numMainPaths, self.numSteps])
+        self.mainPath = np.zeros([self.numMainPaths, self.numSteps])
 
     def getConditionalExpectationS(self):
         return self.conditionalExpectationS
@@ -27,34 +29,34 @@ class FeynmanKacFormula(object):
     def getMainPath(self):
         return self.mainPath
 
-    def generatePath(self, r, sigma, S0, q, t0, T):
-        mainW = StockModels.WienerProcess()
-        mainW.generateWiener(1, self.numSteps, t0, T)
-        mainPath = StockModels.GeneralizedBrownianMotion(mainW)
+    def generatePath(self, r, sigma, S0, q):
+        mainPath = StockModels.GeneralizedBrownianMotion(self.noise)
         mainPath.generateStockPath(r, sigma, S0, q)
-        self.mainPath = mainPath.GetS()[0, :]
+        self.mainPath = mainPath.GetS()
         self.t = mainPath.GetTime()
-        for i in range(0, self.numSteps):
-            W = StockModels.WienerProcess()
-            W.generateWiener(self.numPaths, self.numSteps-i, self.getTime()[i], T)
-            p1 = StockModels.GeneralizedBrownianMotion(W)
-            p1.generateStockPath(r, sigma, self.getMainPath()[i], q)
-            self.conditionalExpectationS[i] = p1.GetS()[:, -1].mean()
-            self.conditionalExpectationS2[i] = (p1.GetS()[:, -1]**2).mean()
-            self.conditionalVarianceS[i] = p1.GetS()[:, -1].std()**2
+        for j in range(0, self.numMainPaths):
+            for i in range(0, self.numSteps):
+                W = StockModels.WienerProcess()
+                W.generateWiener(self.numPaths, self.numSteps-i, self.getTime()[i], self.getTime()[-1])
+                p1 = StockModels.GeneralizedBrownianMotion(W)
+                p1.generateStockPath(r, sigma, self.getMainPath()[j, i], q)
+                self.conditionalExpectationS[j, i] = p1.GetS()[:, -1].mean()
+                self.conditionalExpectationS2[j, i] = (p1.GetS()[:, -1]**2).mean()
+                self.conditionalVarianceS[j, i] = p1.GetS()[:, -1].var()
 
-# numPaths = 10
-# numMainPaths = 1
-# t0 = 1e-20
-# dt = 0.005
-# T = 1
-# numSteps = int(T / dt)
-# r = 0.05
-# sigma = 0.2
-# S0 = 1
-# q = 1.1
-# f1 = FeynmanKacFormula(numPaths, numSteps)
-# f1.generatePath(r, sigma, S0, q, t0, T)
+numPaths = 1000
+t0 = 1e-20
+dt = 0.005
+T = 1
+numSteps = int(T / dt)
+r = 0.05
+sigma = 0.2
+S0 = 1
+q = 1.1
+mainW = StockModels.WienerProcess()
+mainW.generateWiener(1, numSteps, t0, T)
+f1 = FeynmanKacFormula(mainW, numPaths)
+f1.generatePath(r, sigma, S0, q)
 
 
 

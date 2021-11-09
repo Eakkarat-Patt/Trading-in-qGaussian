@@ -88,6 +88,7 @@ class GeneralizedBrownianMotion(StockPricesModel):
     def __init__(self, noise):
         StockPricesModel.__init__(self, noise)
         self.c = 0
+        self.q = 0
         self.B = np.zeros([self.GetNumSteps()])
         self.Z = np.zeros([self.GetNumSteps()])
         self.Pq = np.zeros([self.GetNumPaths(), self.GetNumSteps()])
@@ -108,7 +109,11 @@ class GeneralizedBrownianMotion(StockPricesModel):
     def GetOmg(self):
         return self.Omg
 
+    def GetEntropyIndex(self):
+        return self.q
+
     def generateStockPath(self, r, sigma, S0, q):
+        self.q = q
         self.c = (np.pi * gamma(1 / (q - 1) - 0.5) ** 2) / ((q - 1) * gamma(1 / (q - 1)) ** 2)
         self.B = self.c ** ((1 - q) / (3 - q)) * ((2 - q) * (3 - q) * self.GetTime()) ** (-2 / (3 - q))
         self.Z = ((2 - q) * (3 - q) * self.c * self.GetTime()) ** (1 / (3 - q))
@@ -126,29 +131,38 @@ class GeneralizedBrownianMotion(StockPricesModel):
                            + sigma * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
 
 
-# numPaths = 100000
-# dt = 0.001
-# t0 = 1e-20
-# T = 1
-# numSteps = int(T / dt)
-# r = 0.05
-# sigma = 0.2
-# S0 = 50
-# q = 1.3
+numPaths = 100000
+dt = 0.001
+t0 = 1e-20
+T = 1
+numSteps = int(T / dt)
+r = 0.005
+sigma = 0.02
+S0 = 50
+q = 1.011
 #
 #
-# w1 = WienerProcess()
-# w1.generateWiener(numPaths, numSteps, t0, T)
+w1 = WienerProcess()
+w1.generateWiener(numPaths, numSteps, t0, T)
 #
-# p1 = GeometricBrownianMotion(w1)
-# p1.generateStockPath(r, sigma, S0)
-#
-# p2 = GeneralizedBrownianMotion(w1)
-# p2.generateStockPath(r, sigma, S0, q)
+p1 = GeometricBrownianMotion(w1)
+p1.generateStockPath(r, sigma, S0)
 
-def logReturn(func1, func2):
+p2 = GeneralizedBrownianMotion(w1)
+p2.generateStockPath(r, sigma, S0, 1.011)
+
+p3 = GeneralizedBrownianMotion(w1)
+p3.generateStockPath(r, sigma, S0, 1.2)
+
+p4 = GeneralizedBrownianMotion(w1)
+p4.generateStockPath(r, sigma, S0, 1.4)
+
+p5 = GeneralizedBrownianMotion(w1)
+p5.generateStockPath(r, sigma, S0, 1.6)
+
+def logReturn(func1):
     df = pd.DataFrame({'time': func1.GetTime(),
-                       'stock price': func1.GetS()[MaxDifference(func1, func2), :]})
+                       'stock price': func1.GetS()[0, :]})
     df['daily log return'] = np.log(df['stock price'] / df['stock price'].shift(1))
     df['daily log return'] = (df['daily log return'] - df['daily log return'].mean()) / df['daily log return'].std()  # standardization
     return df['daily log return']
@@ -156,13 +170,20 @@ def logReturn(func1, func2):
 
 def distPlot(func1, func2, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1, binwidth=0.2, color='r', binrange=[-10, 10], label='Tsallis', stat='density', log_scale=(False, logScale))
-    sns.histplot(func2, binwidth=0.2, binrange=[-10, 10], label='Gaussian', stat='density', log_scale=(False, logScale))
-    plt.xlim(-10, 10)
+    sns.histplot(func1.GetS()[:, -1], binwidth=0.2, binrange=[44,56], color='r', label='Tsallis q = {}'.format(func1.GetEntropyIndex()), log_scale=(False, logScale))
+    sns.histplot(func2.GetS()[:, -1], binwidth=0.2, binrange=[44,56], label='Gaussian', log_scale=(False, logScale))
     plt.legend()
-    plt.title('Tsallis Distribution')
+    plt.title('Terminal Time Stock Price Distribution')
     plt.show()
 
+def ReturnDistributionPlot(func1, func2, logScale=False):
+    plt.figure(figsize=(8, 5), dpi=500)
+    sns.histplot(func1, binwidth=0.2, color='r', binrange=[-6, 6], label='Tsallis q = 1.011', stat='density', log_scale=(False, logScale))
+    sns.histplot(func2, binwidth=0.2, binrange=[-6, 6], label='Gaussian', stat='density', log_scale=(False, logScale))
+    plt.xlim(-6, 6)
+    plt.legend()
+    plt.title('Log return distribution')
+    plt.show()
 
 def pathPlot(x, y1, numPaths=20):
     plt.figure(figsize=(8, 5), dpi=500)
@@ -174,11 +195,11 @@ def pathPlot(x, y1, numPaths=20):
     plt.show()
 
 
-def pathPlot2(x, y1, y2):
+def pathPlot2(y1, y2):
     plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(x, y1[0, :], label='GBM')
-    plt.plot(x, y2[0, :], label='Generalized GBM q = {}'.format(q))
-    plt.xlim([0.0, x[-1]])
+    plt.plot(y1.GetTime(), y1.GetS()[0, :], label='GBM')
+    plt.plot(y1.GetTime(), y2.GetS()[0, :], label='Generalized GBM q = {}'.format(y2.GetEntropyIndex()))
+    plt.xlim([0.0, y1.GetTime()[-1]])
     plt.title('Stock price path')
     plt.ylabel('Price')
     plt.xlabel('Time')
