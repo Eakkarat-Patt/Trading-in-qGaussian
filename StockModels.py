@@ -131,34 +131,34 @@ class GeneralizedBrownianMotion(StockPricesModel):
                            + sigma * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
 
 
-numPaths = 100000
-dt = 0.001
-t0 = 1e-20
-T = 1
-numSteps = int(T / dt)
-r = 0.005
-sigma = 0.02
-S0 = 50
-q = 1.011
+# numPaths = 10000
+# dt = 0.001
+# t0 = 1e-20
+# T = 10
+# numSteps = int(T / dt)
+# r = 0.005*10
+# sigma = 0.02*10
+# S0 = 10
+# q = 1.011
+# # #
+# # #
+# w1 = WienerProcess()
+# w1.generateWiener(numPaths, numSteps, t0, T)
+# # #
+# p1 = GeometricBrownianMotion(w1)
+# p1.generateStockPath(r, sigma, S0)
 #
+# p2 = GeneralizedBrownianMotion(w1)
+# p2.generateStockPath(r, sigma, S0, 1.011)
 #
-w1 = WienerProcess()
-w1.generateWiener(numPaths, numSteps, t0, T)
+# p3 = GeneralizedBrownianMotion(w1)
+# p3.generateStockPath(r, sigma, S0, 1.2)
 #
-p1 = GeometricBrownianMotion(w1)
-p1.generateStockPath(r, sigma, S0)
-
-p2 = GeneralizedBrownianMotion(w1)
-p2.generateStockPath(r, sigma, S0, 1.011)
-
-p3 = GeneralizedBrownianMotion(w1)
-p3.generateStockPath(r, sigma, S0, 1.2)
-
-p4 = GeneralizedBrownianMotion(w1)
-p4.generateStockPath(r, sigma, S0, 1.4)
-
-p5 = GeneralizedBrownianMotion(w1)
-p5.generateStockPath(r, sigma, S0, 1.6)
+# p4 = GeneralizedBrownianMotion(w1)
+# p4.generateStockPath(r, sigma, S0, 1.4)
+# #
+# p5 = GeneralizedBrownianMotion(w1)
+# p5.generateStockPath(r, sigma, S0, 1.6)
 
 
 def logReturn(func1):
@@ -198,11 +198,11 @@ def pathPlot(x, y1, numPaths=20):
     plt.show()
 
 
-def pathPlot2(y1, y2):
+def pathPlot2(y1, y2, start):
     plt.figure(figsize=(8, 5), dpi=500)
     plt.plot(y1.GetTime(), y1.GetS()[0, :], label='GBM')
     plt.plot(y1.GetTime(), y2.GetS()[0, :], label='Generalized GBM q = {}'.format(y2.GetEntropyIndex()))
-    plt.xlim([0.0, y1.GetTime()[-1]])
+    plt.xlim([start, y1.GetTime()[-1]])
     plt.title('Stock price path')
     plt.ylabel('Price')
     plt.xlabel('Time')
@@ -210,10 +210,12 @@ def pathPlot2(y1, y2):
     plt.show()
 
 
-def MaxDifference(func1, func2):
-    diff = np.zeros([func1.GetS().shape[0]])
-    finalS1 = func1.GetS()[:, -1]
-    finalS2 = func2.GetS()[:, -1]
-    for i in range(func1.GetS().shape[0]):
-        diff[i] = abs(finalS1[i]-finalS2[i])
-    return np.argmax(diff)
+def EstimateReturn(func):
+    df = pd.DataFrame({'time': func.GetTime()})
+    df2 = pd.DataFrame({'mean': []})
+    for i in range(func.GetNumPaths()):
+        df[str(i)] = func.GetS()[i, :]
+        df[str(i)] = np.log(df[str(i)] / df[str(i)].shift(1))
+        df[str(i)] = (df[str(i)] - df[str(i)].mean()) / df[str(i)].std()  # Standardization
+        df2.loc[i] = df[str(i)].mean()
+    return df2['mean'].mean()

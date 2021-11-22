@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import StockModels
 import FeynmanKacFormula as fk
+from scipy.stats import kurtosis
 import pandas as pd
 
 
@@ -275,21 +276,21 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
             self.rvPrice[j, :] = rvPrice
 
 
-numPaths = 1
-numSims = 1
+numPaths = 2000
+numSims = 2000
 fkNumPaths = 1000
 t0 = 1e-20
 T = 1
 dt = 0.005
 numSteps = int(T / dt)
 r = 0.002
-sigma = 0.09
+sigma = 0.05
 S0 = 50
 
 alpha = 0.0001
-k = 100
-A = 1500
-q = 1.38
+k = 1.5
+A = 100
+q = 1.5
 
 mainW = StockModels.WienerProcess()
 mainW.generateWiener(numPaths, numSteps, t0, T)
@@ -304,21 +305,21 @@ order = OrderArrival(numPaths, numSteps)
 
 mm2 = GBMInventoryStrategy(mainW, numSims)
 mm2.initializeSimulation(r, sigma, S0, alpha, k, A, order)
-
-
+#
+#
 mm3 = QGaussianInventoryStrategy(mainW, numSims)
 mm3.initializeSimulation(r, sigma, S0, q, alpha, k, A, fkNumPaths, order)
 
-# df = pd.DataFrame({'Profit': mm3.getProfit()[:, -1], 'Inventory': mm3.getInventory()[:, -1]})
-# df.to_csv('profit inventory Generalized GBM .csv', index=False)
-# profit = pd.read_csv('Profit Generalized GBM on Normal GBM Strategy.csv')
+df = pd.DataFrame({'Profit': mm3.getProfit()[:, -1], 'Inventory': mm3.getInventory()[:, -1]})
+df.to_csv('Generalized GBM alpha={} k={} A={} q={}.csv'.format(alpha, k , A, q), index=False)
+# profit = pd.read_csv('Generalized GBM alpha=0.0001 k=1.5 A=100 q=1.38.csv')
 
 
 
 
 def ProfitDistributionPlot(func1):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1, binwidth=2, color='r')
+    sns.histplot(func1, binwidth=1, color='r')
     # plt.xlim([-50, 150])
     plt.title('Profit Distribution')
     plt.show()
