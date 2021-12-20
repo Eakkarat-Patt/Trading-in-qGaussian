@@ -20,7 +20,7 @@ class FeynmanKacFormula(object):
     def getConditionalExpectationS2(self):
         return self.conditionalExpectationS2
 
-    def getVariancePaths(self):
+    def getVarianceEachTimeStep(self):
         return self.conditionalVarianceS
 
     def getTime(self):
@@ -48,20 +48,36 @@ class FeynmanKacFormula(object):
 # numPaths = 1000
 # t0 = 1e-20
 # dt = 0.005
-# T = 1
+# T = 10
 # numSteps = int(T / dt)
 # r = 0.005
 # sigma = 0.02
 # S0 = 50
 # q = 1.5
 # mainW = StockModels.WienerProcess()
-# mainW.generateWiener(100, numSteps, t0, T)
+# mainW.generateWiener(1, numSteps, t0, T)
 # f1 = FeynmanKacFormula(mainW, numPaths)
 # f1.generatePath(r, sigma, S0, q)
 # p2 = StockModels.GeneralizedBrownianMotion(mainW)
 # p2.generateStockPath(r, sigma, S0, q)
 
+def ExpectationPlot(func):
+    plt.figure(figsize=(8, 5), dpi=500)
+    plt.plot(func.getTime(), func.getConditionalExpectationS()[0, :])
+    plt.xlim([0.0, func.getTime()[-1]])
+    plt.title('Conditional Expectation of S given t')
+    plt.ylabel('Conditional Expectation')
+    plt.xlabel('Time')
+    plt.show()
 
+def ExpectationPlot2(func):
+    plt.figure(figsize=(8, 5), dpi=500)
+    plt.plot(func.getTime(), func.getConditionalExpectationS2()[0, :])
+    plt.xlim([0.0, func.getTime()[-1]])
+    plt.title('Conditional Expectation of S given t')
+    plt.ylabel('Conditional Expectation')
+    plt.xlabel('Time')
+    plt.show()
 
 def pathPlot(x, y1, y2):
     plt.figure(figsize=(8, 5), dpi=500)
@@ -82,6 +98,16 @@ def errorPlot(x, y1, y2):
     plt.plot(x, error)
     plt.xlim([0.0, x[-1]])
     plt.ylabel('error')
+    plt.xlabel('Time')
+    plt.legend()
+    plt.show()
+
+def VarPlot(func):
+    plt.figure(figsize=(8, 5), dpi=500)
+    plt.plot(func.getTime(), func.getVarianceEachTimeStep()[0,:])
+    plt.xlim([0.0, func.getTime()[-1]])
+    plt.title('Conditional Variance Given Time.')
+    plt.ylabel('Variance')
     plt.xlabel('Time')
     plt.legend()
     plt.show()

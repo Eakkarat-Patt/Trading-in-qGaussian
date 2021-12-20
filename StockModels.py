@@ -8,8 +8,8 @@ from scipy.special import gamma
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-plt.rc('font', **{'family': 'serif', 'serif': ['Computer Modern Roman']})
-plt.rc('text', usetex=True)
+# plt.rc('font', **{'family': 'serif', 'serif': ['Computer Modern Roman']})
+# plt.rc('text', usetex=True)
 
 class WienerProcess(object):
     def __init__(self):
@@ -134,42 +134,72 @@ class GeneralizedBrownianMotion(StockPricesModel):
 # numPaths = 10000
 # dt = 0.001
 # t0 = 1e-20
-# T = 10
+# T = 1
 # numSteps = int(T / dt)
-# r = 0.005*10
-# sigma = 0.02*10
+# r = 0.05
+# sigma = 0.08
 # S0 = 10
-# q = 1.011
+# q = 1.4
 # # #
 # # #
 # w1 = WienerProcess()
 # w1.generateWiener(numPaths, numSteps, t0, T)
-# # #
+# # # # #
 # p1 = GeometricBrownianMotion(w1)
 # p1.generateStockPath(r, sigma, S0)
-#
-# p2 = GeneralizedBrownianMotion(w1)
-# p2.generateStockPath(r, sigma, S0, 1.011)
-#
-# p3 = GeneralizedBrownianMotion(w1)
-# p3.generateStockPath(r, sigma, S0, 1.2)
-#
+# # #
+# # # p2 = GeneralizedBrownianMotion(w1)
+# # # p2.generateStockPath(r, sigma, S0, 1.011)
+# # #
+# # # p3 = GeneralizedBrownianMotion(w1)
+# # # p3.generateStockPath(r, sigma, S0, 1.2)
+# # #
 # p4 = GeneralizedBrownianMotion(w1)
 # p4.generateStockPath(r, sigma, S0, 1.4)
 # #
 # p5 = GeneralizedBrownianMotion(w1)
 # p5.generateStockPath(r, sigma, S0, 1.6)
 
+def TsallisDistribution(func1, func2):
+    df = pd.DataFrame({'time': func1.GetTime(),
+                       'B': func2.GetB(),
+                       'Z': func2.GetZ(),
+                       'stock price': func1.GetS()[0, :]})
+    df['daily log return'] = np.log(df['stock price'] / df['stock price'].shift(1))
+    # df['daily log return'] = (df['daily log return'] - df['daily log return'].mean()) / \
+    #                          df['daily log return'].std()  # standardization
+    df['TsallisDist'] = ((1-df['B']*(1-q)*(df['daily log return'] - r * dt)**2)**(1/(1-q)))/df['Z']
+    return df['TsallisDist']
+
+def TsallisPDF(func, r, sigma, q, initial, final):
+    x = np.linspace(initial, final, 10000)
+    Pq = (1-func.GetB()[-1]*(1-q)*(x - r)**2/sigma**2)**(1/(1-q))/func.GetZ()[-1]
+    return Pq
+
+def GaussianDistribution(func1):
+    df = pd.DataFrame({'time': func1.GetTime(),
+                       'stock price': func1.GetS()[0, :]})
+    df['daily log return'] = np.log(df['stock price'] / df['stock price'].shift(1))
+    # df['daily log return'] = (df['daily log return'] - df['daily log return'].mean()) / \
+    #                          df['daily log return'].std()  # standardization
+    df['GaussianDist'] = np.exp(-((df['daily log return']-df['daily log return'].mean())/df['daily log return'].std())**2/(2))/(sigma * np.sqrt(2 * np.pi))
+    return df['GaussianDist']
 
 def logReturn(func1):
     df = pd.DataFrame({'time': func1.GetTime(),
                        'stock price': func1.GetS()[0, :]})
     df['daily log return'] = np.log(df['stock price'] / df['stock price'].shift(1))
-    df['daily log return'] = (df['daily log return'] - df['daily log return'].mean()) / df['daily log return'].std()  # standardization
+    #df['daily log return'] = (df['daily log return'] - df['daily log return'].mean()) / df['daily log return'].std()  # standardization
     return df['daily log return']
 
+def distPlot(func1, logScale=False):
+    plt.figure(figsize=(8, 5), dpi=500)
+    sns.histplot(func1, binwidth=0.005, label='Gaussian', log_scale=(False, logScale))
+    plt.legend()
+    plt.title('Terminal Time Stock Price Distribution')
+    plt.show()
 
-def distPlot(func1, func2, logScale=False):
+def compareDistPlot(func1, func2, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
     sns.histplot(func1.GetS()[:, -1], binwidth=0.2, binrange=[44,56], color='r', label='Tsallis q = {}'.format(func1.GetEntropyIndex()), log_scale=(False, logScale))
     sns.histplot(func2.GetS()[:, -1], binwidth=0.2, binrange=[44,56], label='Gaussian', log_scale=(False, logScale))
@@ -178,11 +208,9 @@ def distPlot(func1, func2, logScale=False):
     plt.show()
 
 
-def ReturnDistributionPlot(func1, func2, logScale=False):
+def ReturnDistributionPlot(func1, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1, binwidth=0.2, color='r', binrange=[-6, 6], label='Tsallis q = 1.011', stat='density', log_scale=(False, logScale))
-    sns.histplot(func2, binwidth=0.2, binrange=[-6, 6], label='Gaussian', stat='density', log_scale=(False, logScale))
-    plt.xlim(-6, 6)
+    sns.histplot(func1, binwidth=0.5, label='Gaussian', stat='density', log_scale=(False, logScale))
     plt.legend()
     plt.title('Log return distribution')
     plt.show()
@@ -208,14 +236,3 @@ def pathPlot2(y1, y2, start):
     plt.xlabel('Time')
     plt.legend()
     plt.show()
-
-
-def EstimateReturn(func):
-    df = pd.DataFrame({'time': func.GetTime()})
-    df2 = pd.DataFrame({'mean': []})
-    for i in range(func.GetNumPaths()):
-        df[str(i)] = func.GetS()[i, :]
-        df[str(i)] = np.log(df[str(i)] / df[str(i)].shift(1))
-        df[str(i)] = (df[str(i)] - df[str(i)].mean()) / df[str(i)].std()  # Standardization
-        df2.loc[i] = df[str(i)].mean()
-    return df2['mean'].mean()

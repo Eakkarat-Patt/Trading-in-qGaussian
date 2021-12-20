@@ -141,12 +141,12 @@ class GBMInventoryStrategy(MarketMakingStrategy):
         MarketMakingStrategy.__init__(self, noise, numSims)
 
     def initializeSimulation(self, r, sigma, S0, alpha, k, A, order):
-        p1 = StockModels.GeometricBrownianMotion(self.noise)
-        p1.generateStockPath(r, sigma, S0)
-        t = p1.GetTime()
-        S = p1.GetS()
-        self.ConditionalExpectationSGivenTime = S * np.exp(r * (T-t))
-        self.ConditionalExpectationS2GivenTime = S**2 * (np.exp((2 * r + sigma**2) * (T - t)))
+        p1 = StockModels.GeneralizedBrownianMotion(self.noise)
+        p1.generateStockPath(r, sigma, S0, q)
+        self.t = p1.GetTime()
+        self.S = p1.GetS()
+        self.ConditionalExpectationSGivenTime = self.getS() * np.exp(r * (T-self.getTime()))
+        self.ConditionalExpectationS2GivenTime = self.getS()**2 * (np.exp((2 * r + sigma**2) * (T - self.getTime())))
         for j in range(0, self.numSims):
             spread = 2 / k + alpha
             bid = np.zeros([self.numSteps])
@@ -159,7 +159,7 @@ class GBMInventoryStrategy(MarketMakingStrategy):
             deltaB = np.zeros([self.numSteps])
             deltaA = np.zeros([self.numSteps])
 
-            rvPrice[0] = S[j, 0]*np.exp(r*(T-t[0]))
+            rvPrice[0] = self.getS()[j, 0]*np.exp(r*(T-self.getTime()[0]))
             bid[0] = rvPrice[0] - spread / 2.
             ask[0] = rvPrice[0] + spread / 2.
             for i in range(1, self.numSteps):
@@ -169,8 +169,8 @@ class GBMInventoryStrategy(MarketMakingStrategy):
                 bid[i] = rvPrice[i] - spread / 2.
                 ask[i] = rvPrice[i] + spread / 2.
 
-                deltaB[i] = S[j, i] - bid[i]
-                deltaA[i] = ask[i] - S[j, i]
+                deltaB[i] = self.getS()[j, i] - bid[i]
+                deltaA[i] = ask[i] - self.getS()[j, i]
 
                 lambdaA = A * np.exp(-k * deltaA[i])
                 ProbA = lambdaA * dt
@@ -193,14 +193,12 @@ class GBMInventoryStrategy(MarketMakingStrategy):
                     n[i] = n[i - 1]
                     x[i] = x[i - 1] - bid[i] + ask[i]
 
-                w[i] = x[i] + n[i] * S[j, i]
-            self.t = t
+                w[i] = x[i] + n[i] * self.getS()[j, i]
             self.bid[j, :] = bid
             self.ask[j, :] = ask
             self.n[j, :] = n
             self.spread[j, :] = spread
             self.w[j, :] = w
-            self.S[j, :] = S[j, :]
             self.rvPrice[j, :] = rvPrice
 
 
@@ -221,6 +219,7 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
         self.t = f1.getTime()
         self.q = q
         spread = 2 / k + alpha
+        numRun = 1
         for j in range(0, self.numSims):
 
             bid = np.zeros([self.numSteps])
@@ -268,19 +267,25 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
                     x[i] = x[i - 1] - bid[i] + ask[i]
 
                 w[i] = x[i] + n[i] * self.S[j, i]
+
             self.bid[j, :] = bid
             self.ask[j, :] = ask
             self.n[j, :] = n
             self.spread[j, :] = spread
             self.w[j, :] = w
             self.rvPrice[j, :] = rvPrice
+            print('{}/{} completed'.format(numRun, self.getnumSims()))
+            numRun += 1
 
+class QGaussianInventoryStrategyOnRealData(MarketMakingStrategy):
+    def __init__(self, noise, numSims):
+        MarketMakingStrategy.__init__(self, noise, numSims)
 
-numPaths = 2000
-numSims = 2000
+numPaths = 5
+numSims = 5
 fkNumPaths = 1000
 t0 = 1e-20
-T = 1
+T = 10
 dt = 0.005
 numSteps = int(T / dt)
 r = 0.002
@@ -290,47 +295,59 @@ S0 = 50
 alpha = 0.0001
 k = 1.5
 A = 100
-q = 1.5
+q = 1.3
 
 mainW = StockModels.WienerProcess()
 mainW.generateWiener(numPaths, numSteps, t0, T)
 
 order = OrderArrival(numPaths, numSteps)
 
-# mm1 = BasicInventoryStrategy(w, numSims)
-# mm1.initializeSimulation(r, sigma, S0, alpha, k, A)
-
-# f1 = fk.FeynmanKacFormula(mainW, numPaths)
-# f1.generatePath(r, sigma, S0, q)
 
 mm2 = GBMInventoryStrategy(mainW, numSims)
 mm2.initializeSimulation(r, sigma, S0, alpha, k, A, order)
-#
-#
+
 mm3 = QGaussianInventoryStrategy(mainW, numSims)
 mm3.initializeSimulation(r, sigma, S0, q, alpha, k, A, fkNumPaths, order)
 
-df = pd.DataFrame({'Profit': mm3.getProfit()[:, -1], 'Inventory': mm3.getInventory()[:, -1]})
-df.to_csv('Generalized GBM alpha={} k={} A={} q={}.csv'.format(alpha, k , A, q), index=False)
-# profit = pd.read_csv('Generalized GBM alpha=0.0001 k=1.5 A=100 q=1.38.csv')
+# df2 = pd.DataFrame({'Time': mm2.getTime()})
+# for i in range(numSims):
+#     df2['rvPrice'+ str(i)] = mm2.getrvPrice()[i, :]
+#     df2['Bid' + str(i)] = mm2.getBid()[i, :]
+#     df2['Ask' + str(i)] = mm2.getAsk()[i, :]
+#     df2['Inventory'+str(i)] = mm2.getInventory()[i, :]
+#     df2['Profit' + str(i)] = mm2.getProfit()[i, :]
+# df2.to_csv('Data/6.12.21/GBM alpha={} k={} A={} r={} sigma={}.csv'.format(alpha, k , A, r, sigma),
+#            index=False)
+# #
+# df3 = pd.DataFrame({'Time': mm3.getTime()})
+# for i in range(numSims):
+#     df3['rvPrice' + str(i)] = mm3.getrvPrice()[i, :]
+#     df3['Bid' + str(i)] = mm3.getBid()[i, :]
+#     df3['Ask' + str(i)] = mm3.getAsk()[i, :]
+#     df3['Inventory'+str(i)] = mm3.getInventory()[i, :]
+#     df3['Profit' + str(i)] = mm3.getProfit()[i, :]
+# df2.to_csv('Data/6.12.21/qG alpha={} k={} A={} r={} sigma={} q={}.csv'.format(alpha, k , A, r, sigma, mm3.GetEntropyIndex()),
+#            index=False)
+# gbm = pd.read_csv('Data/6.12.21/GBM alpha=0.0001 k=1.5 A=100 r=0.002 sigma=0.05.csv')
+# qg = pd.read_csv('Data/6.12.21/qG alpha=0.0001 k=1.5 A=100 r=0.002 sigma=0.05 q=1.3.csv')
 
 
 
 
 def ProfitDistributionPlot(func1):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1, binwidth=1, color='r')
+    sns.histplot(func1, binwidth=1.5, color='r')
     # plt.xlim([-50, 150])
     plt.title('Profit Distribution')
     plt.show()
 
 
-def SpreadPlot(x, y1, y2, y3):
+def SpreadPlot(func):
     plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(x, y1, label='Stock price')
-    plt.plot(x, y2, label='Ask price')
-    plt.plot(x, y3, label='Bid price')
-    plt.xlim([0.0, x[-1]])
+    plt.plot(func.getTime(), func.getS()[0,:], label='Stock price')
+    plt.plot(func.getTime(), func.getAsk()[0,:], label='Ask price')
+    plt.plot(func.getTime(), func.getBid()[0,:], label='Bid price')
+    plt.xlim([0.0, func.getTime()[-1]])
     plt.title('Stock price path')
     plt.ylabel('Price')
     plt.xlabel('Time')
@@ -350,48 +367,72 @@ def rvPricePlot(x, y1, y2):
     plt.show()
 
 
-def InventoryPlot(x, y):
+def StockPricePlot(x, y1, y2, stop):
     plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(x, y[0, :])
-    plt.xlim([0.0, x[-1]])
-    plt.title('Share quantity holded')
+    plt.plot(x[x <= stop], y1[0, x <= stop], label='GBM')
+    plt.plot(x[x <= stop], y2[0, x <= stop], label='qGaussian q={}'.format(mm3.GetEntropyIndex()))
+    plt.xlim([0.0, stop])
+    plt.title('Stock price path')
+    plt.ylabel('Price')
+    plt.xlabel('Time')
+    plt.legend()
+    plt.show()
+
+
+def InventoryPlot(x, y1, y2, stop):
+    plt.figure(figsize=(8, 5), dpi=500)
+    plt.plot(x[x <= stop], y2[2, x <= stop], label='GBM')
+    plt.plot(x[x <= stop], y1[2, x <= stop], label='qGaussian q={}'.format(mm3.GetEntropyIndex()))
+    plt.xlim([0.0, stop])
+    plt.title('Share quantity held')
     plt.ylabel('Number of share')
     plt.xlabel('Time')
     plt.legend()
     plt.show()
 
-def WealthPlot(x, y1, y2):
+def WealthPlot(x, y1, y2, stop):
     plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(x, y1[0, :], label='Gaussian')
-    plt.plot(x, y2[0, :], label='Tsallis q = {}'.format(mm3.GetEntropyIndex()))
-    plt.xlim([0.0, x[-1]])
-    plt.title('Wealth between two strategies')
-    plt.ylabel('Wealth')
+    plt.plot(x[x <= stop], y1[4, x <= stop], label='GBM')
+    plt.plot(x[x <= stop], y2[4, x <= stop], label='qGaussian q={}'.format(mm3.GetEntropyIndex()))
+    plt.xlim([0.0, stop])
+    plt.title('Comparison of wealth between two strategies')
+    plt.ylabel('wealth in dollar')
     plt.xlabel('Time')
     plt.legend()
     plt.show()
 
 
 
-def ExpectationPlot(x, y1, y2):
+def ExpectationPlot(x, y1, y2, stop):
     plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(x, y1[0, :], label='GBM')
-    plt.plot(x, y2[0, :], label='Generalized GBM q = {}'.format(q))
-    plt.xlim([0.0, x[-1]])
+    plt.plot(x[:stop], y1[0, :stop], label='GBM')
+    plt.plot(x[:stop], y2[0, :stop], label='Generalized GBM q = {}'.format(q))
+    plt.xlim([0.0, x[stop]])
     plt.title('Conditional Expectation of S Given t')
     plt.ylabel('$E[S_T]$')
     plt.xlabel('Time')
     plt.legend()
     plt.show()
 
-
-def BidAskPlot(x, bid1, ask1, bid2, ask2):
+def ExpectationPlot2(x, y1, y2, stop):
     plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(x, bid1[0, :], label='GBM', color='r')
-    plt.plot(x, ask1[0, :], color='r')
-    plt.plot(x, bid2[0, :], label='Generalized GBM q = {}'.format(q), color='b')
-    plt.plot(x, ask2[0, :], color='b')
-    plt.xlim([0.0, x[-1]])
+    plt.plot(x[x <= stop], y1[0, x <= stop], label='GBM')
+    plt.plot(x[x <= stop], y2[0, x <= stop], label='Generalized GBM q = {}'.format(q))
+    plt.xlim([0.0, stop])
+    plt.title('Conditional Expectation of S Given t')
+    plt.ylabel('$E[S_T^2]$')
+    plt.xlabel('Time')
+    plt.legend()
+    plt.show()
+
+
+def BidAskPlot(x, bid1, ask1, bid2, ask2, stop):
+    plt.figure(figsize=(8, 5), dpi=500)
+    plt.plot(x[x <= stop], bid1[0, x <= stop], label='GBM', color='r')
+    plt.plot(x[x <= stop], ask1[0, x <= stop], color='r')
+    plt.plot(x[x <= stop], bid2[0, x <= stop], label='Generalized GBM q = {}'.format(q), color='b')
+    plt.plot(x[x <= stop], ask2[0, x <= stop], color='b')
+    plt.xlim([0.0, stop])
     plt.title('Bid Ask Spread vs Time')
     plt.ylabel('$S$')
     plt.xlabel('$t$')
