@@ -206,6 +206,7 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
     def __init__(self, noise, numSims):
         MarketMakingStrategy.__init__(self, noise, numSims)
         self.q = 0
+        # self.numRun = 1
 
     def GetEntropyIndex(self):
         return self.q
@@ -219,7 +220,6 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
         self.t = f1.getTime()
         self.q = q
         spread = 2 / k + alpha
-        numRun = 1
         for j in range(0, self.numSims):
 
             bid = np.zeros([self.numSteps])
@@ -274,28 +274,28 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
             self.spread[j, :] = spread
             self.w[j, :] = w
             self.rvPrice[j, :] = rvPrice
-            print('{}/{} completed'.format(numRun, self.getnumSims()))
-            numRun += 1
+            # print('{}/{} completed'.format(self.numRun, self.getnumSims()))
+            # self.numRun += 1
 
 class QGaussianInventoryStrategyOnRealData(MarketMakingStrategy):
     def __init__(self, noise, numSims):
         MarketMakingStrategy.__init__(self, noise, numSims)
 
-numPaths = 5
-numSims = 5
+numPaths = 1000
+numSims = 1000
 fkNumPaths = 1000
 t0 = 1e-20
-T = 10
+T = 1
 dt = 0.005
 numSteps = int(T / dt)
 r = 0.002
 sigma = 0.05
-S0 = 50
+S0 = 1
 
 alpha = 0.0001
-k = 1.5
-A = 100
-q = 1.3
+k = 100
+A = 1000
+q = 1.4
 
 mainW = StockModels.WienerProcess()
 mainW.generateWiener(numPaths, numSteps, t0, T)
@@ -336,8 +336,9 @@ mm3.initializeSimulation(r, sigma, S0, q, alpha, k, A, fkNumPaths, order)
 
 def ProfitDistributionPlot(func1):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1, binwidth=1.5, color='r')
+    sns.histplot(func1.getProfit()[:, -1], bins=50, color='r')
     # plt.xlim([-50, 150])
+    plt.xlim([min(func1.getProfit()[:,-1]), max(func1.getProfit()[:,-1])])
     plt.title('Profit Distribution')
     plt.show()
 

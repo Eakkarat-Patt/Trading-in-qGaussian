@@ -131,34 +131,33 @@ class GeneralizedBrownianMotion(StockPricesModel):
                            + sigma * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
 
 
-# numPaths = 10000
-# dt = 0.001
-# t0 = 1e-20
-# T = 1
-# numSteps = int(T / dt)
-# r = 0.05
-# sigma = 0.08
-# S0 = 10
-# q = 1.4
-# # #
-# # #
-# w1 = WienerProcess()
-# w1.generateWiener(numPaths, numSteps, t0, T)
-# # # # #
+numPaths = 10000
+dt = 0.001
+t0 = 1e-20
+T = 1
+numSteps = int(T / dt)
+r = 0.05
+sigma = 0.08
+S0 = 1
+#
+#
+w1 = WienerProcess()
+w1.generateWiener(numPaths, numSteps, t0, T)
+#
 # p1 = GeometricBrownianMotion(w1)
 # p1.generateStockPath(r, sigma, S0)
-# # #
-# # # p2 = GeneralizedBrownianMotion(w1)
-# # # p2.generateStockPath(r, sigma, S0, 1.011)
-# # #
-# # # p3 = GeneralizedBrownianMotion(w1)
-# # # p3.generateStockPath(r, sigma, S0, 1.2)
-# # #
+#
+# p2 = GeneralizedBrownianMotion(w1)
+# p2.generateStockPath(r, sigma, S0, 1.011)
+
+# p3 = GeneralizedBrownianMotion(w1)
+# p3.generateStockPath(r, sigma, S0, 1.2)
+#
 # p4 = GeneralizedBrownianMotion(w1)
 # p4.generateStockPath(r, sigma, S0, 1.4)
-# #
-# p5 = GeneralizedBrownianMotion(w1)
-# p5.generateStockPath(r, sigma, S0, 1.6)
+
+p5 = GeneralizedBrownianMotion(w1)
+p5.generateStockPath(r, sigma, S0, 1.6)
 
 def TsallisDistribution(func1, func2):
     df = pd.DataFrame({'time': func1.GetTime(),
@@ -194,15 +193,17 @@ def logReturn(func1):
 
 def distPlot(func1, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1, binwidth=0.005, label='Gaussian', log_scale=(False, logScale))
+    sns.histplot(func1, label='Gaussian', log_scale=(False, logScale))
     plt.legend()
     plt.title('Terminal Time Stock Price Distribution')
     plt.show()
 
 def compareDistPlot(func1, func2, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1.GetS()[:, -1], binwidth=0.2, binrange=[44,56], color='r', label='Tsallis q = {}'.format(func1.GetEntropyIndex()), log_scale=(False, logScale))
-    sns.histplot(func2.GetS()[:, -1], binwidth=0.2, binrange=[44,56], label='Gaussian', log_scale=(False, logScale))
+    sns.histplot(func1.GetS()[:, -1], binwidth=0.2, binrange=[min(func2.GetS()[:, -1]), max(func2.GetS()[:, -1])],
+                 color='r', stat='density', label='Tsallis q = {}'.format(func1.GetEntropyIndex()), log_scale=(False, logScale))
+    sns.histplot(func2.GetS()[:, -1], binwidth=0.2, binrange=[min(func2.GetS()[:, -1]), max(func2.GetS()[:, -1])],
+                 stat='density', label='Gaussian', log_scale=(False, logScale))
     plt.legend()
     plt.title('Terminal Time Stock Price Distribution')
     plt.show()
