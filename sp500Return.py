@@ -4,6 +4,7 @@ from scipy.stats import norm
 import seaborn as sns
 import pandas as pd
 import StockModels
+from scipy.special import gamma
 
 
 numPaths = 10000
@@ -91,7 +92,20 @@ def spReturnTest(date,logScale = False):
     plt.show()
 
 
-def spReturnTest2(start, stop, logScale = False):
+def X(start, stop):
+    x = np.linspace(start, stop, 10000)
+    return x
+
+
+def TsallisPDF(start, stop, t, q):
+    x = X(start, stop)
+    c = (np.pi * gamma(1 / (q - 1) - 0.5) ** 2) / ((q - 1) * gamma(1 / (q - 1)) ** 2)
+    B = c ** ((1 - q) / (3 - q)) * ((2 - q) * (3 - q) * t) ** (-2 / (3 - q))
+    Z = ((2 - q) * (3 - q) * c * t) ** (1 / (3 - q))
+    Pq = ((1 - B * (1 - q) * x**2) ** (1 / (1 - q))) / Z
+    return Pq
+
+def spReturnTest2(start, stop, t, q, logScale = False):
     df = pd.read_csv('Data/sp500data.csv')
     df.set_index(['Date', 'Time'], inplace=True)
     tradingDay = df.loc[start:stop]
@@ -99,22 +113,28 @@ def spReturnTest2(start, stop, logScale = False):
     mu = tradingDay['Log return'].mean()
     std = tradingDay['Log return'].std()
     tradingDay['Log return'] = (tradingDay['Log return']-mu)/std  # Standardization
-    print(tradingDay.head())
+    print(tradingDay)
     print(tradingDay['Log return'].mean())
     print(tradingDay['Log return'].var())
-    x = np.linspace(np.min(tradingDay['Log return']), np.max(tradingDay['Log return']), 10000)
-    normalFit = norm.pdf(x, 0, 0.5)
+    x = np.linspace(np.min(tradingDay['Log return']), np.max(tradingDay['Log return']), 618299)
+    normalFit = norm.pdf(x, 0, 0.45)
+    c = (np.pi * gamma(1 / (q - 1) - 0.5) ** 2) / ((q - 1) * gamma(1 / (q - 1)) ** 2)
+    B = c ** ((1 - q) / (3 - q)) * ((2 - q) * (3 - q) * t) ** (-2 / (3 - q))
+    Z = ((2 - q) * (3 - q) * c * t) ** (1 / (3 - q))
+    Pq = ((1 - B * (1 - q) * x ** 2) ** (1 / (1 - q))) / Z
+    bin_count = int(np.ceil(np.log2(len(x))) + 1)
     plt.figure(figsize=(8, 5), dpi=400)
-    plt.plot(x, normalFit, color='r', label='Gaussian dist: mu = {}, sigma = {}'.format(
+    plt.plot(x, normalFit, color='r', label='Gaussian dist: mu = {}, \n sigma = {}'.format(
         round(normalFit.mean(), 2), round(normalFit.std(), 2)))
-    sns.histplot(tradingDay['Log return'], stat='density', bins=80, binrange=[-5, 5], label='S&P500 index'
+    plt.plot(x, Pq, color='g', label='Tsallis dist sigma = {}'.format(round(np.sqrt(1/((5-3*q)*B)),2)))
+    sns.histplot(tradingDay['Log return'], stat='density', bins=bin_count, binrange=[-5, 5], kde=False, label='S&P500 index'
                  , log_scale=(False, logScale))
-    plt.title('Minutely log return from' + start + 'to' + stop)
+    plt.title('Minutely log return from ' + start + ' to ' + stop)
     plt.xlim(-4, 4)
-    plt.ylim(10e-5, 10e-1)
+    # plt.ylim(10e-5, 10e-1)
     plt.xlabel('Minutely log return')
     plt.legend()
     plt.show()
 
-
-spReturnTest2('2015-01-02', '2020-12-31')
+spReturnTest2('2010-01-02', '2014-12-31', 1, 1.5)
+# spReturnTest2('2015-01-02', '2020-12-31', 0.32, 1.5)
