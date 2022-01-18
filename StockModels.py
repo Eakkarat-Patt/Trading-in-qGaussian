@@ -131,21 +131,23 @@ class GeneralizedBrownianMotion(StockPricesModel):
                            + sigma * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
 
 
-numPaths = 10000
-dt = 0.001
-t0 = 1e-20
-T = 1
-numSteps = int(T / dt)
-r = 0.05
-sigma = 0.08
-S0 = 1
+# numPaths = 1000
+# dt = 0.001
+# t0 = 1e-20
+# T = 1
+# numSteps = int(T / dt)
+# r1 = 0.05
+# sigma1 = 0.08
+# r2 = 0.1
+# sigma2 = 0.15
+# S0 = 1
 #
 #
-w1 = WienerProcess()
-w1.generateWiener(numPaths, numSteps, t0, T)
-#
+# w1 = WienerProcess()
+# w1.generateWiener(numPaths, numSteps, t0, T)
+# # #
 # p1 = GeometricBrownianMotion(w1)
-# p1.generateStockPath(r, sigma, S0)
+# p1.generateStockPath(r1, sigma1, S0)
 #
 # p2 = GeneralizedBrownianMotion(w1)
 # p2.generateStockPath(r, sigma, S0, 1.011)
@@ -156,8 +158,8 @@ w1.generateWiener(numPaths, numSteps, t0, T)
 # p4 = GeneralizedBrownianMotion(w1)
 # p4.generateStockPath(r, sigma, S0, 1.4)
 
-p5 = GeneralizedBrownianMotion(w1)
-p5.generateStockPath(r, sigma, S0, 1.6)
+# p5 = GeneralizedBrownianMotion(w1)
+# p5.generateStockPath(r2, sigma2, S0, 1.6)
 
 def TsallisDistribution(func1, func2):
     df = pd.DataFrame({'time': func1.GetTime(),

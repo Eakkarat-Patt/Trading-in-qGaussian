@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import StockModels
 import FeynmanKacFormula as fk
-from scipy.stats import kurtosis
+from scipy.stats import skew
 import pandas as pd
 
 
@@ -65,6 +65,7 @@ class MarketMakingStrategy(object):
 
     def GetConditionalExpectationS2GivenTime(self):
         return self.ConditionalExpectationS2GivenTime
+
 
 class BasicInventoryStrategy(MarketMakingStrategy):
     """
@@ -288,13 +289,15 @@ t0 = 1e-20
 T = 1
 dt = 0.005
 numSteps = int(T / dt)
-r = 0.002
-sigma = 0.05
-S0 = 1
+r1 = 0.05
+sigma1 = 0.02
+r2 = 0.09
+sigma2 = 0.05
+S0 = 10
 
 alpha = 0.0001
-k = 100
-A = 1000
+k = 2
+A = 150
 q = 1.4
 
 mainW = StockModels.WienerProcess()
@@ -304,10 +307,10 @@ order = OrderArrival(numPaths, numSteps)
 
 
 mm2 = GBMInventoryStrategy(mainW, numSims)
-mm2.initializeSimulation(r, sigma, S0, alpha, k, A, order)
+mm2.initializeSimulation(r1, sigma1, S0, alpha, k, A, order)
 
 mm3 = QGaussianInventoryStrategy(mainW, numSims)
-mm3.initializeSimulation(r, sigma, S0, q, alpha, k, A, fkNumPaths, order)
+mm3.initializeSimulation(r2, sigma2, S0, q, alpha, k, A, fkNumPaths, order)
 
 # df2 = pd.DataFrame({'Time': mm2.getTime()})
 # for i in range(numSims):
@@ -331,7 +334,14 @@ mm3.initializeSimulation(r, sigma, S0, q, alpha, k, A, fkNumPaths, order)
 # gbm = pd.read_csv('Data/6.12.21/GBM alpha=0.0001 k=1.5 A=100 r=0.002 sigma=0.05.csv')
 # qg = pd.read_csv('Data/6.12.21/qG alpha=0.0001 k=1.5 A=100 r=0.002 sigma=0.05 q=1.3.csv')
 
-
+print('mm2 profit mean: ' + str(mm2.getProfit()[:, -1].mean()))
+print('mm2 profit std: ' + str(mm2.getProfit()[:, -1].std()))
+print('mm2 inventory mean: ' + str(mm2.getInventory()[:, -1].mean()))
+print('mm2 inventory std: ' + str(mm2.getInventory()[:, -1].std()))
+print('mm3 profit mean: ' + str(mm3.getProfit()[:, -1].mean()))
+print('mm3 profit std: ' + str(mm3.getProfit()[:, -1].std()))
+print('mm3 inventory mean: ' + str(mm3.getInventory()[:, -1].mean()))
+print('mm3 inventory std: ' + str(mm3.getInventory()[:, -1].std()))
 
 
 def ProfitDistributionPlot(func1):
