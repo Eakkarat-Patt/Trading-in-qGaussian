@@ -150,8 +150,8 @@ w1.generateWiener(numPaths, numSteps, t0, T)
 p1 = GeometricBrownianMotion(w1)
 p1.generateStockPath(r1, sigma1, S0)
 #
-# p2 = GeneralizedBrownianMotion(w1)
-# p2.generateStockPath(r2, sigma2, S0, q)
+p2 = GeneralizedBrownianMotion(w1)
+p2.generateStockPath(r2, sigma2, S0, q)
 #
 # p3 = GeneralizedBrownianMotion(w1)
 # p3.generateStockPath(r, sigma, S0, 1.2)
@@ -168,11 +168,11 @@ def estimateDrift(func1):
                        'stock price': func1.GetS()[1, :]})
     df['increment return'] = np.log(df['stock price'] / df['stock price'].shift(1))
     r = df['increment return']
-    rSum = r.sum()
-    meanReturn = rSum/(r.shape[0] * dt)
+    meanReturn = r.mean()
+    varReturn = r.var()
     alpha = (3-q)*((2-q) * (3-q) * func1.Getc())**((q-1)/(3-q))
-    mu = meanReturn + sigma2**2/2 * alpha * (1-(1-q)*func1.GetB()[-1] * func1.GetOmg()[1, -1]**2 *
-                                             func1.GetTime()[-1]**((q-1)/(3-q)))
+    mu = (meanReturn + varReturn/2 * alpha * (1-(1-q)*func1.GetB()[-1] * func1.GetOmg()[1, -1]**2 *
+                                             func1.GetTime()[-1]**((q-1)/(3-q))))/dt
     return mu
 
 
@@ -181,9 +181,9 @@ def estimateDrift2(func1):
                        'stock price': func1.GetS()[1, :]})
     df['increment return'] = np.log(df['stock price'] / df['stock price'].shift(1))
     r = df['increment return']
-    rSum = r.sum()
-    meanReturn = rSum/(r.shape[0] * dt)
-    mu = meanReturn + sigma2**2/2
+    meanReturn = r.mean()
+    varReturn = r.var()
+    mu = (meanReturn + varReturn/2)/dt
     return mu
 
 
