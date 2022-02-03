@@ -143,9 +143,9 @@ dt = 0.001
 t0 = 1e-20
 T = 5
 numSteps = int(T / dt)
-r1 = 0.05
-sigma1 = 0.1
-r2 = 0.1
+r1 = 0.1
+sigma1 = 0.15
+r2 = 0.05
 sigma2 = 0.15
 S0 = 10
 q = 1.3
@@ -170,9 +170,9 @@ p1.generateStockPath(r1, sigma1, S0)
 # p5.generateStockPath(r2, sigma2, S0, 1.6)
 
 
-def estimateDrift(func1):
+def estimateDrift(func1, path):
     df = pd.DataFrame({'time': func1.GetTime(),
-                       'stock price': func1.GetS()[1, :]})
+                       'stock price': func1.GetS()[path, :]})
     df['increment return'] = np.log(df['stock price'] / df['stock price'].shift(1))
     r = df['increment return']
     meanReturn = r.mean()
@@ -183,9 +183,9 @@ def estimateDrift(func1):
     return mu
 
 
-def estimateDrift2(func1):
+def estimateDrift2(func1, path):
     df = pd.DataFrame({'time': func1.GetTime(),
-                       'stock price': func1.GetS()[1, :]})
+                       'stock price': func1.GetS()[path, :]})
     df['increment return'] = np.log(df['stock price'] / df['stock price'].shift(1))
     r = df['increment return']
     meanReturn = r.mean()
@@ -231,6 +231,12 @@ def distPlot(func1, logScale=False):
     sns.histplot(func1, label='Gaussian', log_scale=(False, logScale))
     plt.legend()
     plt.title('Terminal Time Stock Price Distribution')
+    plt.show()
+
+def driftDistPlot(func1):
+    plt.figure(figsize=(8, 5), dpi=500)
+    sns.histplot(func1, bins=20)
+    plt.title('Estimate Drift Distribution')
     plt.show()
 
 def compareDistPlot(func1, func2, logScale=False):
