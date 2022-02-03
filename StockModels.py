@@ -145,7 +145,7 @@ T = 5
 numSteps = int(T / dt)
 r1 = 0.1
 sigma1 = 0.15
-r2 = 0.05
+r2 = 0.1
 sigma2 = 0.15
 S0 = 10
 q = 1.3
@@ -157,8 +157,8 @@ w1.generateWiener(numPaths, numSteps, t0, T)
 p1 = GeometricBrownianMotion(w1)
 p1.generateStockPath(r1, sigma1, S0)
 #
-# p2 = GeneralizedBrownianMotion(w1)
-# p2.generateStockPath(r2, sigma2, S0, q)
+p2 = GeneralizedBrownianMotion(w1)
+p2.generateStockPath(r2, sigma2, S0, q)
 #
 # p3 = GeneralizedBrownianMotion(w1)
 # p3.generateStockPath(r, sigma, S0, 1.2)
@@ -233,10 +233,12 @@ def distPlot(func1, logScale=False):
     plt.title('Terminal Time Stock Price Distribution')
     plt.show()
 
-def driftDistPlot(func1):
+def driftDistPlot():
+    y = [estimateDrift(p2, i) for i in range(0, numPaths)]
+    y = np.array(y)
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1, bins=20)
-    plt.title('Estimate Drift Distribution')
+    sns.histplot(y, bins=20)
+    plt.title('Estimate Drift Distribution: mu = {}'.format(y.mean()))
     plt.show()
 
 def compareDistPlot(func1, func2, logScale=False):
