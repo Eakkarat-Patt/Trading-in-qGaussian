@@ -148,7 +148,7 @@ sigma1 = 0.15
 r2 = 0.1
 sigma2 = 0.15
 S0 = 10
-q = 1.3
+q = 1.4
 #
 #
 w1 = WienerProcess()
@@ -170,28 +170,32 @@ p2.generateStockPath(r2, sigma2, S0, q)
 # p5.generateStockPath(r2, sigma2, S0, 1.6)
 
 
-def estimateDrift(func1, path):
+def estimateDrift(func1, whichPath, process):
     df = pd.DataFrame({'time': func1.GetTime(),
-                       'stock price': func1.GetS()[path, :]})
+                       'stock price': func1.GetS()[whichPath, :]})
     df['increment return'] = np.log(df['stock price'] / df['stock price'].shift(1))
     r = df['increment return']
     meanReturn = r.mean()
     varReturn = r.var()
-    alpha = (3-q)*((2-q) * (3-q) * func1.Getc())**((q-1)/(3-q))
-    mu = (meanReturn + varReturn/2 * alpha * (1-(1-q)*func1.GetB()[-1] * func1.GetOmg()[1, -1]**2 *
-                                             func1.GetTime()[-1]**((q-1)/(3-q))))/dt
-    return mu
+    try:
+        if process == 'gBm':
+            mu = (meanReturn + varReturn / 2) / dt
+        elif process == 'qGaussian':
+            alpha = (3 - q) * ((2 - q) * (3 - q) * func1.Getc()) ** ((q - 1) / (3 - q))
+            mu = (meanReturn + varReturn / 2 * alpha * (1 - (1 - q) * func1.GetB()[-1] * func1.GetOmg()[1, -1] ** 2 *
+                                                        func1.GetTime()[-1] ** ((q - 1) / (3 - q)))) / dt
+        return mu
+    except:
+        print('Given process does not exist')
 
 
-def estimateDrift2(func1, path):
-    df = pd.DataFrame({'time': func1.GetTime(),
-                       'stock price': func1.GetS()[path, :]})
-    df['increment return'] = np.log(df['stock price'] / df['stock price'].shift(1))
-    r = df['increment return']
-    meanReturn = r.mean()
-    varReturn = r.var()
-    mu = (meanReturn + varReturn/2)/dt
-    return mu
+def driftDistPlot(path, process):
+    y = [estimateDrift(path, i, process) for i in range(0, numPaths)]
+    y = np.array(y)
+    plt.figure(figsize=(8, 5), dpi=500)
+    sns.histplot(y, bins=20)
+    plt.title('Estimate Drift Distribution: mu = {}'.format(y.mean()))
+    plt.show()
 
 
 def TsallisDistribution(func1, func2):
@@ -233,13 +237,7 @@ def distPlot(func1, logScale=False):
     plt.title('Terminal Time Stock Price Distribution')
     plt.show()
 
-def driftDistPlot():
-    y = [estimateDrift(p2, i) for i in range(0, numPaths)]
-    y = np.array(y)
-    plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(y, bins=20)
-    plt.title('Estimate Drift Distribution: mu = {}'.format(y.mean()))
-    plt.show()
+
 
 def compareDistPlot(func1, func2, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
