@@ -141,7 +141,7 @@ class GeneralizedBrownianMotion(StockPricesModel):
                            + (sigma * (self.SNovich[:, i-1] + self.SNovich[:, i-1] + sigma * self.SNovich[:, i-1]
                                       * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1]))/2) * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
 
-numPaths = 100
+numPaths = 10000
 dt = 0.001
 t0 = 1e-20
 T = 1
@@ -175,7 +175,7 @@ p2.generateStockPath(r2, sigma2, S0, q)
 
 def estimateDrift(func1, whichPath, process):
     df = pd.DataFrame({'time': func1.GetTime(),
-                       'stock price': func1.GetS()[whichPath, :]})
+                       'stock price': func1.GetSNovich()[whichPath, :]})
     df['increment return'] = np.log(df['stock price'] / df['stock price'].shift(1))
     r = df['increment return']
     meanReturn = r.mean()
