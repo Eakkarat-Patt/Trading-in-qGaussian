@@ -126,6 +126,7 @@ class GeneralizedBrownianMotion(StockPricesModel):
         self.Z = ((2 - q) * (3 - q) * self.c * self.GetTime()) ** (1 / (3 - q))
         self.Pq[:, 0] = ((1 - self.GetB()[0] * (1 - q) * self.GetOmg()[:, 0] ** 2) ** (1 / (1 - q))) / self.GetZ()[0]
         self.S[:, 0] = S0
+        self.SNovich[:, 0] = S0
 
         for i in range(1, self.GetNumSteps()):
             self.Omg[:, i] = self.Omg[:, i - 1] + ((1 - self.GetB()[i - 1] * (1 - q) * self.Omg[:, i - 1] ** 2) ** 0.5
@@ -136,12 +137,14 @@ class GeneralizedBrownianMotion(StockPricesModel):
 
             self.S[:, i] = self.S[:, i - 1] + r * self.S[:, i - 1] * (self.GetTime()[i]-self.GetTime()[i-1])\
                            + sigma * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
+            self.SNovich[:, i] = self.SNovich[:, i-1] + r * self.SNovich[:, i - 1] * (self.GetTime()[i]-self.GetTime()[i-1])\
+                           + (sigma * (self.SNovich[:, i-1] + self.SNovich[:, i-1] + sigma * self.SNovich[:, i-1]
+                                      * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1]))/2) * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
 
-
-numPaths = 10000
+numPaths = 100
 dt = 0.001
 t0 = 1e-20
-T = 5
+T = 1
 numSteps = int(T / dt)
 r1 = 0.1
 sigma1 = 0.15
@@ -286,8 +289,8 @@ def pathPlot3(y1, start):
 
     """
     plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(y1.GetTime(), y1.GetS()[0, :], label='gBm under Ito interpretation')
-    plt.plot(y1.GetTime(), y1.GetSNovich()[0, :], label='gBm under Stratonovich interpretation')
+    plt.plot(y1.GetTime(), y1.GetS()[0, :], label='q-gaussian process under Ito interpretation')
+    plt.plot(y1.GetTime(), y1.GetSNovich()[0, :], label='q-gaussian process under Stratonovich interpretation')
     plt.xlim([start, y1.GetTime()[-1]])
     plt.title('Stock price path')
     plt.ylabel('Price')
