@@ -43,15 +43,11 @@ class WienerProcess(object):
 class StockPricesModel(object):
     def __init__(self, noise):
         self.S = np.zeros([noise.getW().shape[0], noise.getW().shape[1]])
-        self.SNovich = np.zeros([noise.getW().shape[0], noise.getW().shape[1]])
         self.W = noise.getW()
         self.t = noise.getTime()
 
     def GetS(self):
         return self.S
-
-    def GetSNovich(self):
-        return self.SNovich
 
     def GetW(self):
         return self.W
@@ -83,12 +79,9 @@ class GeometricBrownianMotion(StockPricesModel):
 
     def generateStockPath(self, r, sigma, S0):
         self.S[:, 0] = S0
-        self.SNovich[:, 0] = S0
         for i in range(1, self.GetNumSteps()):
             self.S[:, i] = self.S[:, i - 1] * np.exp((r - 0.5 * sigma**2)*(self.GetTime()[i]-self.GetTime()[i-1]) +
                                                      sigma * (self.GetW()[:, i] - self.GetW()[:, i-1]))
-            self.SNovich[:, i] = self.SNovich[:, i - 1] * np.exp(r * (self.GetTime()[i] - self.GetTime()[i - 1]) +
-                                sigma * (self.GetW()[:, i] - self.GetW()[:, i - 1]))
 
 
 class GeneralizedBrownianMotion(StockPricesModel):
@@ -126,7 +119,6 @@ class GeneralizedBrownianMotion(StockPricesModel):
         self.Z = ((2 - q) * (3 - q) * self.c * self.GetTime()) ** (1 / (3 - q))
         self.Pq[:, 0] = ((1 - self.GetB()[0] * (1 - q) * self.GetOmg()[:, 0] ** 2) ** (1 / (1 - q))) / self.GetZ()[0]
         self.S[:, 0] = S0
-        self.SNovich[:, 0] = S0
 
         for i in range(1, self.GetNumSteps()):
             self.Omg[:, i] = self.Omg[:, i - 1] + ((1 - self.GetB()[i - 1] * (1 - q) * self.Omg[:, i - 1] ** 2) ** 0.5
@@ -135,11 +127,10 @@ class GeneralizedBrownianMotion(StockPricesModel):
 
             self.Pq[:, i] = ((1 - self.GetB()[i] * (1 - q) * self.GetOmg()[:, i] ** 2) ** (1 / (1 - q))) / self.GetZ()[i]
 
-            self.S[:, i] = self.S[:, i - 1] + r * self.S[:, i - 1] * (self.GetTime()[i]-self.GetTime()[i-1])\
+            self.S[:, i] = self.S[:, i - 1] + (r + (sigma**2 / 2) * self.GetPq()[:, i]**(1-self.GetEntropyIndex())) * \
+                           self.S[:, i - 1] * (self.GetTime()[i]-self.GetTime()[i-1])\
                            + sigma * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
-            self.SNovich[:, i] = self.SNovich[:, i-1] + r * self.SNovich[:, i - 1] * (self.GetTime()[i]-self.GetTime()[i-1])\
-                           + (sigma * (self.SNovich[:, i-1] + self.SNovich[:, i-1] + sigma * self.SNovich[:, i-1]
-                                      * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1]))/2) * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
+
 
 numPaths = 10000
 dt = 0.001
@@ -175,7 +166,7 @@ p2.generateStockPath(r2, sigma2, S0, q)
 
 def estimateDrift(func1, whichPath, process):
     df = pd.DataFrame({'time': func1.GetTime(),
-                       'stock price': func1.GetSNovich()[whichPath, :]})
+                       'stock price': func1.GetS()[whichPath, :]})
     df['increment return'] = np.log(df['stock price'] / df['stock price'].shift(1))
     r = df['increment return']
     meanReturn = r.mean()
