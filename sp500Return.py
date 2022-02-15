@@ -108,7 +108,7 @@ def TsallisPDF(start, stop, t, q):
 def spReturnTest2(start, stop, t, q, logScale = False):
     df = pd.read_csv('Data/sp500data.csv')
     df.set_index(['Date', 'Time'], inplace=True)
-    tradingDay = df.loc[start:stop]
+    tradingDay = df.loc[start:stop, :]
     tradingDay['Log return'] = np.log(tradingDay['Close']/tradingDay['Close'].shift(1))
     mu = tradingDay['Log return'].mean()
     std = tradingDay['Log return'].std()

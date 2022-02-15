@@ -1,6 +1,7 @@
 import StockModels
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 class FeynmanKacFormula(object):
     def __init__(self, noise, numPaths):
@@ -38,22 +39,63 @@ class FeynmanKacFormula(object):
             for i in range(0, self.numSteps):
                 W = StockModels.WienerProcess()
                 W.generateWiener(self.numPaths, self.numSteps-i, self.getTime()[i], self.getTime()[-1])
-                p1 = StockModels.GeneralizedBrownianMotion(W)
-                p1.generateStockPath(r, sigma, self.getMainPath()[j, i], q)
-                self.conditionalExpectationS[j, i] = p1.GetS()[:, -1].mean()
-                self.conditionalVarianceS[j, i] = p1.GetS()[:, -1].var()
+                s1 = StockModels.GeneralizedBrownianMotion(W)
+                s1.generateStockPath(r, sigma, self.getMainPath()[j, i], q)
+                self.conditionalExpectationS[j, i] = s1.GetS()[:, -1].mean()
+                self.conditionalVarianceS[j, i] = s1.GetS()[:, -1].var()
                 self.conditionalExpectationS2[j, i] = self.conditionalVarianceS[j, i]+self.conditionalExpectationS[j, i]**2
 
 
-# numPaths = 1000
-# t0 = 1e-20
-# dt = 0.005
-# T = 10
-# numSteps = int(T / dt)
-# r = 0.005
-# sigma = 0.02
-# S0 = 50
-# q = 1.5
+def tradingDay(date):
+    df = pd.read_csv('Data/sp500data.csv')
+    df.set_index(['Date', 'Time'], inplace=True)
+    trade = df.loc[date, 'Close']
+    return trade
+
+
+class FeynmanKacFormulaRealData(object):
+    def __init__(self, date):
+        self.mainPath = tradingDay(date).values
+        self.t = np.linspace(1e-20, 1, self.mainPath.shape[0])
+        self.conditionalExpectationS = np.zeros([1, self.mainPath.shape[0]])
+        self.conditionalExpectationS2 = np.zeros([1, self.mainPath.shape[0]])
+        self.conditionalVarianceS = np.zeros([1, self.mainPath.shape[0]])
+
+    def getMainPath(self):
+        return self.mainPath
+
+    def getTime(self):
+        return self.t
+
+    def getConditionalExpectationS(self):
+        return self.conditionalExpectationS
+
+    def getConditionalExpectationS2(self):
+        return self.conditionalExpectationS2
+
+    def getVarianceEachTimeStep(self):
+        return self.conditionalVarianceS
+
+    def generatePath(self, r, sigma, q):
+
+        for i in range(0, self.getMainPath().shape[0]):
+            W = StockModels.WienerProcess()
+            W.generateWiener(1000, self.getTime().shape[0] - i, self.getTime()[i], self.getTime()[-1])
+            s1 = StockModels.GeneralizedBrownianMotion(W)
+            s1.generateStockPath(r, sigma, self.getMainPath()[i], q)
+            self.conditionalExpectationS[0, i] = s1.GetS()[:, -1].mean()
+            self.conditionalVarianceS[0, i] = s1.GetS()[:, -1].var()
+            self.conditionalExpectationS2[0, i] = self.conditionalVarianceS[0, i] + self.conditionalExpectationS[0, i] ** 2
+
+numPaths = 1000
+t0 = 1e-20
+dt = 0.005
+T = 10
+numSteps = int(T / dt)
+r = 0.005
+sigma = 0.02
+S0 = 50
+q = 1.5
 # mainW = StockModels.WienerProcess()
 # mainW.generateWiener(1, numSteps, t0, T)
 # f1 = FeynmanKacFormula(mainW, numPaths)
@@ -61,6 +103,8 @@ class FeynmanKacFormula(object):
 # p2 = StockModels.GeneralizedBrownianMotion(mainW)
 # p2.generateStockPath(r, sigma, S0, q)
 
+f2 = FeynmanKacFormulaRealData('2000-01-04')
+f2.generatePath(r, sigma, q)
 def ExpectationPlot(func):
     plt.figure(figsize=(8, 5), dpi=500)
     plt.plot(func.getTime(), func.getConditionalExpectationS()[0, :])
