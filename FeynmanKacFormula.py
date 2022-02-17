@@ -50,7 +50,8 @@ class FeynmanKacFormula(object):
 
 def tradingDay(startDate, stopDate):
     df = pd.read_csv('Data/sp500data.csv')
-    df.set_index(['Date', 'Time'], inplace=True)
+    df.set_index(['Date'], inplace=True)
+    df = df.T
     trade = df.loc[startDate:stopDate, 'Close']
     return trade
 
@@ -60,7 +61,7 @@ class FeynmanKacFormulaRealData(object):
         self.mainPathDataFrame = tradingDay(startDate, stopDate)
         self.startDate = datetime.datetime.strptime(startDate, '%Y-%m-%d')
         self.stopDate = datetime.datetime.strptime(stopDate, '%Y-%m-%d')
-        self.mainPath = np.zeros([(self.stopDate-self.startDate).days, self.mainPathDataFrame.shape[0]])
+        self.mainPath = {}
         self.t = np.linspace(1e-20, 1, self.mainPath.shape[1])
         self.conditionalExpectationS = np.zeros([self.mainPath.shape[0], self.mainPath.shape[1]])
         self.conditionalExpectationS2 = np.zeros([self.mainPath.shape[0], self.mainPath.shape[1]])
@@ -81,17 +82,27 @@ class FeynmanKacFormulaRealData(object):
     def getVarianceEachTimeStep(self):
         return self.conditionalVarianceS
 
+    def generateMainPath(self):
+        startDate = self.startDate  # use startDate as a dummy variable
+        while startDate < self.stopDate:
+            self.mainPath[startDate.strftime('%Y-%m-%d')] = self.mainPathDataFrame
+
     def generatePath(self, r, sigma, q):
 
-        for j in range(0, self.getMainPath().shape[0]):
-            for i in range(0, self.getMainPath().shape[1]):
-                W = StockModels.WienerProcess()
-                W.generateWiener(1582, self.getTime().shape[0] - i, self.getTime()[i], self.getTime()[-1])
-                s1 = StockModels.GeneralizedBrownianMotion(W)
-                s1.generateStockPath(r, sigma, self.getMainPath()[j][i], q)
-                self.conditionalExpectationS[0, i] = s1.GetS()[:, -1].mean()
-                self.conditionalVarianceS[0, i] = s1.GetS()[:, -1].var()
-                self.conditionalExpectationS2[0, i] = self.conditionalVarianceS[0, i] + self.conditionalExpectationS[0, i] ** 2
+        delta = datetime.timedelta(1)
+        while startDate < self.stopDate:
+            for j in range(0, self.getMainPath().shape[0]):
+                self.mainPath[j, :] = self.mainPathDataFrame.loc[startDate.strftime('%Y-%m-%d')].values
+                for i in range(0, self.getMainPath().shape[1]):
+                    W = StockModels.WienerProcess()
+                    W.generateWiener(1582, self.getTime().shape[0] - i, self.getTime()[i], self.getTime()[-1])
+                    s1 = StockModels.GeneralizedBrownianMotion(W)
+                    s1.generateStockPath(r, sigma, self.getMainPath()[j, i], q)
+                    self.conditionalExpectationS[j, i] = s1.GetS()[:, -1].mean()
+                    self.conditionalVarianceS[j, i] = s1.GetS()[:, -1].var()
+                    self.conditionalExpectationS2[j, i] = self.conditionalVarianceS[j, i] \
+                                                          + self.conditionalExpectationS[j, i] ** 2
+                startDate += delta
 
 numPaths = 1000
 t0 = 1e-20
