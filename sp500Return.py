@@ -116,7 +116,7 @@ def spReturnTest2(start, stop, t, q, logScale = False):
     print(tradingDay)
     print(tradingDay['Log return'].mean())
     print(tradingDay['Log return'].var())
-    x = np.linspace(np.min(tradingDay['Log return']), np.max(tradingDay['Log return']), 618299)
+    x = np.linspace(np.min(tradingDay['Log return']), np.max(tradingDay['Log return']), tradingDay.shape[0])
     normalFit = norm.pdf(x, 0, 0.45)
     c = (np.pi * gamma(1 / (q - 1) - 0.5) ** 2) / ((q - 1) * gamma(1 / (q - 1)) ** 2)
     B = c ** ((1 - q) / (3 - q)) * ((2 - q) * (3 - q) * t) ** (-2 / (3 - q))
@@ -136,5 +136,5 @@ def spReturnTest2(start, stop, t, q, logScale = False):
     plt.legend()
     plt.show()
 
-spReturnTest2('2010-01-02', '2014-12-31', 1, 1.5)
+spReturnTest2('2010-01-02', '2014-12-31', 1, 1.2)
 # spReturnTest2('2015-01-02', '2020-12-31', 0.32, 1.5)

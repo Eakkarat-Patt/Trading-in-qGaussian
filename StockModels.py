@@ -137,12 +137,12 @@ dt = 0.001
 t0 = 1e-20
 T = 1
 numSteps = int(T / dt)
-r1 = 0.1
-sigma1 = 0.15
-r2 = 0.1
-sigma2 = 0.15
+r1 = 0.00044
+sigma1 = 0.01
+r2 = 0.0004498
+sigma2 = 0.011
 S0 = 10
-q = 1.4
+q = 1.48
 #
 #
 w1 = WienerProcess()

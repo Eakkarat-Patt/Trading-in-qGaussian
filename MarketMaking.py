@@ -289,16 +289,16 @@ t0 = 1e-20
 T = 1
 dt = 0.005
 numSteps = int(T / dt)
-r1 = 0.05
-sigma1 = 0.02
-r2 = 0.09
-sigma2 = 0.05
+r1 = 0.00044
+sigma1 = 0.01
+r2 = 0.0004498
+sigma2 = 0.011
 S0 = 10
+q = 1.48
 
 alpha = 0.0001
-k = 2
-A = 150
-q = 1.4
+k = 100
+A = 1000
 
 mainW = StockModels.WienerProcess()
 mainW.generateWiener(numPaths, numSteps, t0, T)
