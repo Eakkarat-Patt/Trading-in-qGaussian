@@ -282,6 +282,7 @@ class QGaussianInventoryStrategyOnRealData(MarketMakingStrategy):
     def __init__(self, noise, numSims):
         MarketMakingStrategy.__init__(self, noise, numSims)
 
+
 numPaths = 1000
 numSims = 1000
 fkNumPaths = 1000
@@ -291,14 +292,14 @@ dt = 0.005
 numSteps = int(T / dt)
 r1 = 0.00044
 sigma1 = 0.01
-r2 = 0.0004498
+r2 = 0.00045
 sigma2 = 0.011
 S0 = 10
 q = 1.48
 
 alpha = 0.0001
 k = 100
-A = 1000
+A = 1500
 
 mainW = StockModels.WienerProcess()
 mainW.generateWiener(numPaths, numSteps, t0, T)
@@ -309,8 +310,8 @@ order = OrderArrival(numPaths, numSteps)
 mm2 = GBMInventoryStrategy(mainW, numSims)
 mm2.initializeSimulation(r1, sigma1, S0, alpha, k, A, order)
 
-mm3 = QGaussianInventoryStrategy(mainW, numSims)
-mm3.initializeSimulation(r2, sigma2, S0, q, alpha, k, A, fkNumPaths, order)
+# mm3 = QGaussianInventoryStrategy(mainW, numSims)
+# mm3.initializeSimulation(r2, sigma2, S0, q, alpha, k, A, fkNumPaths, order)
 
 # df2 = pd.DataFrame({'Time': mm2.getTime()})
 # for i in range(numSims):
@@ -338,10 +339,10 @@ print('mm2 profit mean: ' + str(mm2.getProfit()[:, -1].mean()))
 print('mm2 profit std: ' + str(mm2.getProfit()[:, -1].std()))
 print('mm2 inventory mean: ' + str(mm2.getInventory()[:, -1].mean()))
 print('mm2 inventory std: ' + str(mm2.getInventory()[:, -1].std()))
-print('mm3 profit mean: ' + str(mm3.getProfit()[:, -1].mean()))
-print('mm3 profit std: ' + str(mm3.getProfit()[:, -1].std()))
-print('mm3 inventory mean: ' + str(mm3.getInventory()[:, -1].mean()))
-print('mm3 inventory std: ' + str(mm3.getInventory()[:, -1].std()))
+# print('mm3 profit mean: ' + str(mm3.getProfit()[:, -1].mean()))
+# print('mm3 profit std: ' + str(mm3.getProfit()[:, -1].std()))
+# print('mm3 inventory mean: ' + str(mm3.getInventory()[:, -1].mean()))
+# print('mm3 inventory std: ' + str(mm3.getInventory()[:, -1].std()))
 
 
 def ProfitDistributionPlot(func1):
@@ -392,8 +393,8 @@ def StockPricePlot(x, y1, y2, stop):
 
 def InventoryPlot(x, y1, y2, stop):
     plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(x[x <= stop], y2[2, x <= stop], label='GBM')
-    plt.plot(x[x <= stop], y1[2, x <= stop], label='qGaussian q={}'.format(mm3.GetEntropyIndex()))
+    plt.plot(x[x <= stop], y1[2, x <= stop], label='GBM')
+    plt.plot(x[x <= stop], y2[2, x <= stop], label='qGaussian q={}'.format(mm3.GetEntropyIndex()))
     plt.xlim([0.0, stop])
     plt.title('Share quantity held')
     plt.ylabel('Number of share')
