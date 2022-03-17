@@ -56,53 +56,7 @@ def tradingDay(startDate, stopDate):
     return trade
 
 
-class FeynmanKacFormulaRealData(object):
-    def __init__(self, startDate, stopDate):
-        self.mainPathDataFrame = tradingDay(startDate, stopDate)
-        self.startDate = datetime.datetime.strptime(startDate, '%Y-%m-%d')
-        self.stopDate = datetime.datetime.strptime(stopDate, '%Y-%m-%d')
-        self.mainPath = {}
-        self.t = np.linspace(1e-20, 1, self.mainPath.shape[1])
-        self.conditionalExpectationS = np.zeros([self.mainPath.shape[0], self.mainPath.shape[1]])
-        self.conditionalExpectationS2 = np.zeros([self.mainPath.shape[0], self.mainPath.shape[1]])
-        self.conditionalVarianceS = np.zeros([self.mainPath.shape[0], self.mainPath.shape[1]])
 
-    def getMainPath(self):
-        return self.mainPath
-
-    def getTime(self):
-        return self.t
-
-    def getConditionalExpectationS(self):
-        return self.conditionalExpectationS
-
-    def getConditionalExpectationS2(self):
-        return self.conditionalExpectationS2
-
-    def getVarianceEachTimeStep(self):
-        return self.conditionalVarianceS
-
-    def generateMainPath(self):
-        startDate = self.startDate  # use startDate as a dummy variable
-        while startDate < self.stopDate:
-            self.mainPath[startDate.strftime('%Y-%m-%d')] = self.mainPathDataFrame
-
-    def generatePath(self, r, sigma, q):
-
-        delta = datetime.timedelta(1)
-        while startDate < self.stopDate:
-            for j in range(0, self.getMainPath().shape[0]):
-                self.mainPath[j, :] = self.mainPathDataFrame.loc[startDate.strftime('%Y-%m-%d')].values
-                for i in range(0, self.getMainPath().shape[1]):
-                    W = StockModels.WienerProcess()
-                    W.generateWiener(1582, self.getTime().shape[0] - i, self.getTime()[i], self.getTime()[-1])
-                    s1 = StockModels.GeneralizedBrownianMotion(W)
-                    s1.generateStockPath(r, sigma, self.getMainPath()[j, i], q)
-                    self.conditionalExpectationS[j, i] = s1.GetS()[:, -1].mean()
-                    self.conditionalVarianceS[j, i] = s1.GetS()[:, -1].var()
-                    self.conditionalExpectationS2[j, i] = self.conditionalVarianceS[j, i] \
-                                                          + self.conditionalExpectationS[j, i] ** 2
-                startDate += delta
 
 # numPaths = 1000
 # t0 = 1e-20
