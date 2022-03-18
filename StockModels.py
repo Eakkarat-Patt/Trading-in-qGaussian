@@ -141,8 +141,8 @@ r1 = 0.00044
 sigma1 = 0.01
 r2 = 0.0004498
 sigma2 = 0.011
-S0 = 10
-q = 1.48
+S0 = 1
+q = 1.2
 #
 #
 w1 = WienerProcess()
@@ -217,14 +217,14 @@ def GaussianDistribution(func1):
     df['GaussianDist'] = np.exp(-((df['daily log return']-df['daily log return'].mean())/df['daily log return'].std())**2/(2))/(sigma * np.sqrt(2 * np.pi))
     return df['GaussianDist']
 
-def logReturn(func1):
+def LogReturn(func1):
     df = pd.DataFrame({'time': func1.GetTime(),
                        'stock price': func1.GetS()[0, :]})
     df['daily log return'] = np.log(df['stock price'] / df['stock price'].shift(1))
     #df['daily log return'] = (df['daily log return'] - df['daily log return'].mean()) / df['daily log return'].std()  # standardization
     return df['daily log return']
 
-def distPlot(func1, logScale=False):
+def DistPlot(func1, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
     sns.histplot(func1, label='Gaussian', log_scale=(False, logScale))
     plt.legend()
@@ -233,7 +233,7 @@ def distPlot(func1, logScale=False):
 
 
 
-def compareDistPlot(func1, func2, logScale=False):
+def CompareDistPlot(func1, func2, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
     sns.histplot(func1.GetS()[:, -1], binwidth=0.01, binrange=[min(func2.GetS()[:, -1]), max(func2.GetS()[:, -1])],
                  color='r', stat='density', label='Tsallis q = {}'.format(func1.GetEntropyIndex()), log_scale=(False, logScale))
@@ -245,27 +245,30 @@ def compareDistPlot(func1, func2, logScale=False):
 
 
 def ReturnDistributionPlot(func1, logScale=False):
+    df = pd.DataFrame({'time': func1.GetTime(),
+                       'stock price': func1.GetS()[0, :]})
+    df['daily log return'] = np.log(df['stock price'] / df['stock price'].shift(1))
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1, stat='density', color='b', log_scale=(False, logScale))
+    sns.histplot(df['daily log return'], binwidth=0.0001, stat='density', color='b', log_scale=(False, logScale))
     plt.legend()
     plt.title('Log return distribution')
     plt.show()
 
 
-def pathPlot(x, y1, numPaths=20):
+def PathPlot(x, y1, numPaths=20):
     '''
     plot stock path
     '''
     plt.figure(figsize=(8, 5), dpi=500)
     for i in range(numPaths):
         plt.plot(x, y1[i, :])
-    plt.title('Stock price path')
+    plt.title('Stock price paths')
     plt.ylabel('Price')
     plt.xlabel('Time')
     plt.show()
 
 
-def pathPlot2(y1, y2, start):
+def PathComparisonPlot(y1, y2, start):
     plt.figure(figsize=(8, 5), dpi=500)
     plt.plot(y1.GetTime(), y1.GetS()[0, :], label='GBM')
     plt.plot(y1.GetTime(), y2.GetS()[0, :], label='Generalized GBM q = {}'.format(y2.GetEntropyIndex()))
