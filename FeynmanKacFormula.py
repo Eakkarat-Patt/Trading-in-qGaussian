@@ -58,24 +58,23 @@ def tradingDay(startDate, stopDate):
 
 
 
-# numPaths = 1000
-# t0 = 1e-20
-# dt = 0.005
-# T = 10
-# numSteps = int(T / dt)
-# r = 0.005
-# sigma = 0.02
-# S0 = 50
-# q = 1.5
-# # mainW = StockModels.WienerProcess()
-# # mainW.generateWiener(1, numSteps, t0, T)
-# # f1 = FeynmanKacFormula(mainW, numPaths)
-# # f1.generatePath(r, sigma, S0, q)
+numPaths = 1000
+t0 = 1e-20
+dt = 0.005
+T = 10
+numSteps = int(T / dt)
+r = 0.005
+sigma = 0.02
+S0 = 50
+q = 1.5
+mainW = StockModels.WienerProcess()
+mainW.generateWiener(1, numSteps, t0, T)
+f1 = FeynmanKacFormula(mainW, numPaths)
+f1.generatePath(r, sigma, S0, q)
 # # p2 = StockModels.GeneralizedBrownianMotion(mainW)
 # # p2.generateStockPath(r, sigma, S0, q)
 #
-# f2 = FeynmanKacFormulaRealData('2000-01-04', '2000-01-08')
-# f2.generatePath(r, sigma, q)
+
 def ExpectationPlot(func):
     plt.figure(figsize=(8, 5), dpi=500)
     plt.plot(func.getTime(), func.getConditionalExpectationS()[0, :])
