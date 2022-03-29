@@ -43,11 +43,15 @@ class WienerProcess(object):
 class StockPricesModel(object):
     def __init__(self, noise):
         self.S = np.zeros([noise.getW().shape[0], noise.getW().shape[1]])
+        self.Y = np.zeros([noise.getW().shape[0], noise.getW().shape[1]]) #return
         self.W = noise.getW()
         self.t = noise.getTime()
 
     def GetS(self):
         return self.S
+
+    def GetY(self):
+        return self.Y
 
     def GetW(self):
         return self.W
@@ -124,12 +128,13 @@ class GeneralizedBrownianMotion(StockPricesModel):
             self.Pq[:, i] = ((1 - self.GetB()[i] * (1 - q) * self.GetOmg()[:, i] ** 2) ** (1 / (1 - q))) / self.GetZ()[
                 i]
             self.Omg[:, i] = self.Omg[:, i - 1] + self.GetPq()[:, i-1]**((1-q)/2) * (self.GetW()[:, i] - self.GetW()[:, i - 1])
-
-
-
             self.S[:, i] = self.S[:, i - 1] + (r + (sigma**2 / 2) * self.GetPq()[:, i]**(1-self.GetEntropyIndex())) * \
                            self.S[:, i - 1] * (self.GetTime()[i]-self.GetTime()[i-1])\
                            + sigma * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
+            self.Y[:, i] = self.Y[:, i - 1] + r * (self.GetTime()[i]-self.GetTime()[i-1]) + sigma * \
+                           (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
+
+
 
 
 numPaths = 10000
@@ -140,9 +145,9 @@ numSteps = int(T / dt)
 r1 = 0.00044
 sigma1 = 0.01
 r2 = 0.0004498
-sigma2 = 0.011
+sigma2 = 0.04
 S0 = 1
-q = 1.2
+q = 1.4
 #
 #
 w1 = WienerProcess()
@@ -191,31 +196,6 @@ def driftDistPlot(path, process):
     plt.title('Estimate Drift Distribution: mu = {}'.format(y.mean()))
     plt.show()
 
-
-def TsallisDistribution(func1, func2):
-    df = pd.DataFrame({'time': func1.GetTime(),
-                       'B': func2.GetB(),
-                       'Z': func2.GetZ(),
-                       'stock price': func1.GetS()[0, :]})
-    df['daily log return'] = np.log(df['stock price'] / df['stock price'].shift(1))
-    # df['daily log return'] = (df['daily log return'] - df['daily log return'].mean()) / \
-    #                          df['daily log return'].std()  # standardization
-    df['TsallisDist'] = ((1-df['B']*(1-q)*(df['daily log return'] - r * dt)**2)**(1/(1-q)))/df['Z']
-    return df['TsallisDist']
-
-def TsallisPDF(func, r, sigma, q, initial, final):
-    x = np.linspace(initial, final, 10000)
-    Pq = (1-func.GetB()[-1]*(1-q)*(x - r)**2/sigma**2)**(1/(1-q))/func.GetZ()[-1]
-    return Pq
-
-def GaussianDistribution(func1):
-    df = pd.DataFrame({'time': func1.GetTime(),
-                       'stock price': func1.GetS()[0, :]})
-    df['daily log return'] = np.log(df['stock price'] / df['stock price'].shift(1))
-    # df['daily log return'] = (df['daily log return'] - df['daily log return'].mean()) / \
-    #                          df['daily log return'].std()  # standardization
-    df['GaussianDist'] = np.exp(-((df['daily log return']-df['daily log return'].mean())/df['daily log return'].std())**2/(2))/(sigma * np.sqrt(2 * np.pi))
-    return df['GaussianDist']
 
 def LogReturn(func1):
     df = pd.DataFrame({'time': func1.GetTime(),
