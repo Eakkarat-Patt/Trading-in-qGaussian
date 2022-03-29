@@ -11,6 +11,7 @@ import pandas as pd
 # plt.rc('font', **{'family': 'serif', 'serif': ['Computer Modern Roman']})
 # plt.rc('text', usetex=True)
 
+
 class WienerProcess(object):
     def __init__(self):
         self.paths = {}
@@ -43,7 +44,7 @@ class WienerProcess(object):
 class StockPricesModel(object):
     def __init__(self, noise):
         self.S = np.zeros([noise.getW().shape[0], noise.getW().shape[1]])
-        self.Y = np.zeros([noise.getW().shape[0], noise.getW().shape[1]]) #return
+        self.Y = np.zeros([noise.getW().shape[0], noise.getW().shape[1]])  # return
         self.W = noise.getW()
         self.t = noise.getTime()
 
@@ -86,6 +87,8 @@ class GeometricBrownianMotion(StockPricesModel):
         for i in range(1, self.GetNumSteps()):
             self.S[:, i] = self.S[:, i - 1] * np.exp((r - 0.5 * sigma**2)*(self.GetTime()[i]-self.GetTime()[i-1]) +
                                                      sigma * (self.GetW()[:, i] - self.GetW()[:, i-1]))
+            self.Y[:, i] = self.Y[:, i - 1] + r *  (self.GetTime()[i]-self.GetTime()[i-1]) + sigma * \
+                           (self.GetW()[:, i] - self.GetW()[:, i - 1])
 
 
 class GeneralizedBrownianMotion(StockPricesModel):
@@ -127,14 +130,13 @@ class GeneralizedBrownianMotion(StockPricesModel):
         for i in range(1, self.GetNumSteps()):
             self.Pq[:, i] = ((1 - self.GetB()[i] * (1 - q) * self.GetOmg()[:, i] ** 2) ** (1 / (1 - q))) / self.GetZ()[
                 i]
-            self.Omg[:, i] = self.Omg[:, i - 1] + self.GetPq()[:, i-1]**((1-q)/2) * (self.GetW()[:, i] - self.GetW()[:, i - 1])
+            self.Omg[:, i] = self.Omg[:, i - 1] + self.GetPq()[:, i-1]**((1-q)/2) * \
+                             (self.GetW()[:, i] - self.GetW()[:, i - 1])
             self.S[:, i] = self.S[:, i - 1] + (r + (sigma**2 / 2) * self.GetPq()[:, i]**(1-self.GetEntropyIndex())) * \
                            self.S[:, i - 1] * (self.GetTime()[i]-self.GetTime()[i-1])\
                            + sigma * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
             self.Y[:, i] = self.Y[:, i - 1] + r * (self.GetTime()[i]-self.GetTime()[i-1]) + sigma * \
                            (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
-
-
 
 
 numPaths = 10000
@@ -144,10 +146,10 @@ T = 1
 numSteps = int(T / dt)
 r1 = 0.00044
 sigma1 = 0.01
-r2 = 0.0004498
+r2 = 0
 sigma2 = 0.04
 S0 = 1
-q = 1.4
+q = 1.48
 #
 #
 w1 = WienerProcess()
@@ -201,8 +203,9 @@ def LogReturn(func1):
     df = pd.DataFrame({'time': func1.GetTime(),
                        'stock price': func1.GetS()[0, :]})
     df['daily log return'] = np.log(df['stock price'] / df['stock price'].shift(1))
-    #df['daily log return'] = (df['daily log return'] - df['daily log return'].mean()) / df['daily log return'].std()  # standardization
+    # df['daily log return'] = (df['daily log return'] - df['daily log return'].mean()) / df['daily log return'].std()  # standardization
     return df['daily log return']
+
 
 def DistPlot(func1, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
@@ -210,7 +213,6 @@ def DistPlot(func1, logScale=False):
     plt.legend()
     plt.title('Terminal Time Stock Price Distribution')
     plt.show()
-
 
 
 def CompareDistPlot(func1, func2, logScale=False):
