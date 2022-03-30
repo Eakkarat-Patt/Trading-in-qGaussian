@@ -137,27 +137,27 @@ class GeneralizedBrownianMotion(StockPricesModel):
 
 
 
-numPaths = 10000
-dt = 0.001
-t0 = 1e-20
-T = 1
-numSteps = int(T / dt)
-r1 = 0.00044
-sigma1 = 0.01
-r2 = 0.0004498
-sigma2 = 0.04
-S0 = 1
-q = 1.4
-#
-#
-w1 = WienerProcess()
-w1.generateWiener(numPaths, numSteps, t0, T)
+# numPaths = 10000
+# dt = 0.001
+# t0 = 1e-20
+# T = 1
+# numSteps = int(T / dt)
+# r1 = 0.00044
+# sigma1 = 0.01
+# r2 = 0.0004498
+# sigma2 = 0.04
+# S0 = 1
+# q = 1.4
 # #
-p1 = GeometricBrownianMotion(w1)
-p1.generateStockPath(r1, sigma1, S0)
-#
-p2 = GeneralizedBrownianMotion(w1)
-p2.generateStockPath(r2, sigma2, S0, q)
+# #
+# w1 = WienerProcess()
+# w1.generateWiener(numPaths, numSteps, t0, T)
+# # #
+# p1 = GeometricBrownianMotion(w1)
+# p1.generateStockPath(r1, sigma1, S0)
+# #
+# p2 = GeneralizedBrownianMotion(w1)
+# p2.generateStockPath(r2, sigma2, S0, q)
 #
 # p3 = GeneralizedBrownianMotion(w1)
 # p3.generateStockPath(r, sigma, S0, 1.2)

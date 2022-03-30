@@ -29,6 +29,11 @@ class MarketMakingStrategy(object):
         self.S = np.zeros([self.numSims, self.numSteps])
         self.ConditionalExpectationSGivenTime = np.zeros([self.numSims, self.numSteps])
         self.ConditionalExpectationS2GivenTime = np.zeros([self.numSims, self.numSteps])
+        self.OrderConsumption = np.zeros([self.numSims, self.numSteps])
+        self.ProbA = np.zeros([self.numSims, self.numSteps])
+        self.ProbB = np.zeros([self.numSims, self.numSteps])
+        self.lambdaA = np.zeros([self.numSims, self.numSteps])
+        self.lambdaB = np.zeros([self.numSims, self.numSteps])
 
     def getProfit(self):
         return self.w
@@ -65,6 +70,21 @@ class MarketMakingStrategy(object):
 
     def GetConditionalExpectationS2GivenTime(self):
         return self.ConditionalExpectationS2GivenTime
+
+    def GetOrderConsumption(self):
+        return self.OrderConsumption
+
+    def GetProbA(self):
+        return self.ProbA
+
+    def GetProbB(self):
+        return self.ProbB
+
+    def GetLambdaA(self):
+        return self.lambdaA
+
+    def GetLambdaB(self):
+        return self.lambdaB
 
 
 class BasicInventoryStrategy(MarketMakingStrategy):
@@ -173,26 +193,30 @@ class GBMInventoryStrategy(MarketMakingStrategy):
                 deltaB[i] = self.getS()[j, i] - bid[i]
                 deltaA[i] = ask[i] - self.getS()[j, i]
 
-                lambdaA = A * np.exp(-k * deltaA[i])
-                ProbA = lambdaA * dt
+                self.lambdaA[j, i] = A * np.exp(-k * deltaA[i])
+                self.ProbA[j, i] = self.GetLambdaA()[j, i] * dt
                 AskArrival = order[0][j, i]
 
-                lambdaB = A * np.exp(-k * deltaB[i])
-                ProbB = lambdaB * dt
+                self.lambdaB[j, i] = A * np.exp(-k * deltaB[i])
+                self.ProbB[j, i] = self.GetLambdaB()[j, i] * dt
                 BidArrival = order[1][j, i]
-                if ProbB > BidArrival and ProbA < AskArrival:
+                if self.ProbB[j, i] > BidArrival and self.ProbA[j, i] < AskArrival:
                     n[i] = n[i - 1] + 1
                     x[i] = x[i - 1] - bid[i]
+                    self.OrderConsumption[j, i] = 1
 
-                if ProbB < BidArrival and ProbA > AskArrival:
+                if self.ProbB[j, i] < BidArrival and self.ProbA[j, i] > AskArrival:
                     n[i] = n[i - 1] - 1
                     x[i] = x[i - 1] + ask[i]
-                if ProbB < BidArrival and ProbA < AskArrival:
+                    self.OrderConsumption[j, i] = 2
+                if self.ProbB[j, i] < BidArrival and self.ProbA[j, i] < AskArrival:
                     n[i] = n[i - 1]
                     x[i] = x[i - 1]
-                if ProbB > BidArrival and ProbA > AskArrival:
+                    self.OrderConsumption[j, i] = 3
+                if self.ProbB[j, i] > BidArrival and self.ProbA[j, i] > AskArrival:
                     n[i] = n[i - 1]
                     x[i] = x[i - 1] - bid[i] + ask[i]
+                    self.OrderConsumption[j, i] = 4
 
                 w[i] = x[i] + n[i] * self.getS()[j, i]
             self.bid[j, :] = bid
@@ -211,7 +235,7 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
 
     def GetEntropyIndex(self):
         return self.q
-        
+
     def initializeSimulation(self, r, sigma, S0, q, alpha, k, A, fkNumPaths, order):
         f1 = fk.FeynmanKacFormula(self.noise, fkNumPaths)
         f1.generatePath(r, sigma, S0, q)
@@ -256,16 +280,20 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
                 if ProbB > BidArrival and ProbA < AskArrival:
                     n[i] = n[i - 1] + 1
                     x[i] = x[i - 1] - bid[i]
+                    self.OrderConsumption[j, i] = 1
 
                 if ProbB < BidArrival and ProbA > AskArrival:
                     n[i] = n[i - 1] - 1
                     x[i] = x[i - 1] + ask[i]
+                    self.OrderConsumption[j, i] = 2
                 if ProbB < BidArrival and ProbA < AskArrival:
                     n[i] = n[i - 1]
                     x[i] = x[i - 1]
+                    self.OrderConsumption[j, i] = 3
                 if ProbB > BidArrival and ProbA > AskArrival:
                     n[i] = n[i - 1]
                     x[i] = x[i - 1] - bid[i] + ask[i]
+                    self.OrderConsumption[j, i] = 4
 
                 w[i] = x[i] + n[i] * self.S[j, i]
 
@@ -284,7 +312,7 @@ class QGaussianInventoryStrategyOnRealData(MarketMakingStrategy):
 
 
 numPaths = 1000
-numSims = 1000
+numSims = 500
 fkNumPaths = 1000
 t0 = 1e-20
 T = 1
@@ -294,7 +322,7 @@ r1 = 0.00044
 sigma1 = 0.01
 r2 = 0.00045
 sigma2 = 0.011
-S0 = 10
+S0 = 1
 q = 1.48
 
 alpha = 0.0001
@@ -353,6 +381,12 @@ def ProfitDistributionPlot(func1):
     plt.title('Profit Distribution')
     plt.show()
 
+def DistPlot(func1, logScale=False):
+    plt.figure(figsize=(8, 5), dpi=500)
+    sns.histplot(func1, label='Gaussian', log_scale=(False, logScale))
+    plt.legend()
+    plt.title('Terminal Time Stock Price Distribution')
+    plt.show()
 
 def SpreadPlot(func):
     plt.figure(figsize=(8, 5), dpi=500)
