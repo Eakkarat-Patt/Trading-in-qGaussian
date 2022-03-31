@@ -125,9 +125,9 @@ class GeneralizedBrownianMotion(StockPricesModel):
         self.S[:, 0] = S0
 
         for i in range(1, self.GetNumSteps()):
-            self.Pq[:, i] = ((1 - self.GetB()[i] * (1 - q) * self.GetOmg()[:, i] ** 2) ** (1 / (1 - q))) / self.GetZ()[
-                i]
+
             self.Omg[:, i] = self.Omg[:, i - 1] + self.GetPq()[:, i-1]**((1-q)/2) * (self.GetW()[:, i] - self.GetW()[:, i - 1])
+            self.Pq[:, i] = ((1 - self.GetB()[i] * (1 - q) * self.GetOmg()[:, i] ** 2) ** (1 / (1 - q))) / self.GetZ()[i]
             self.S[:, i] = self.S[:, i - 1] + (r + (sigma**2 / 2) * self.GetPq()[:, i]**(1-self.GetEntropyIndex())) * \
                            self.S[:, i - 1] * (self.GetTime()[i]-self.GetTime()[i-1])\
                            + sigma * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
@@ -145,7 +145,7 @@ numSteps = int(T / dt)
 r1 = 0.00044
 sigma1 = 0.01
 r2 = 0.0004498
-sigma2 = 0.04
+sigma2 = 1
 S0 = 1
 q = 1.4
 #

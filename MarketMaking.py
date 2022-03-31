@@ -314,7 +314,7 @@ q = 1.48
 
 alpha = 0.0001
 k = 100
-A = 1500
+A = 1000
 
 mainW = StockModels.WienerProcess()
 mainW.generateWiener(numPaths, numSteps, t0, T)
@@ -368,11 +368,11 @@ def ProfitDistributionPlot(func1):
     plt.title('Profit Distribution')
     plt.show()
 
-def DistPlot(func1, logScale=False):
+def DistPlot(func1, title, label=None, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1, label='Gaussian', log_scale=(False, logScale))
+    sns.histplot(func1, label=label, log_scale=(False, logScale))
     plt.legend()
-    plt.title('Terminal Time Stock Price Distribution')
+    plt.title(title)
     plt.show()
 
 def SpreadPlot(func):
