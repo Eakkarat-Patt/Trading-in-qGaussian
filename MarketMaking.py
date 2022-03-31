@@ -246,66 +246,52 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
         self.t = f1.getTime()
         self.q = q
         spread = 2 / k + alpha
+        self.rvPrice[:, 0] = self.GetConditionalExpectationSGivenTime()[:, 0]
+        self.bid[:, 0] = self.getrvPrice()[:, 0] - spread / 2
+        self.ask[:, 0] = self.getrvPrice()[:, 0] + spread / 2
+        self.deltaA[:, 0] = self.getS()[:, 0] - self.getBid()[:, 0]
+        self.deltaB[:, 0] = self.getAsk()[:, 0] - self.getS()[:, 0]
+        self.lambdaA[:, 0] = A * np.exp(-k * self.GetDeltaA()[:, 0])
+        self.lambdaB[:, 0] = A * np.exp(-k * self.GetDeltaB()[:, 0])
+        self.ProbA[:, 0] = self.GetLambdaA()[:, 0] * dt
+        self.ProbB[:, 0] = self.GetLambdaB()[:, 0] * dt
         for j in range(0, self.numSims):
-
-            bid = np.zeros([self.numSteps])
-            ask = np.zeros([self.numSteps])
-            n = np.zeros([self.numSteps])
-            x = np.zeros([self.numSteps])
-            w = np.zeros([self.numSteps])
-            rvPrice = np.zeros([self.numSteps])
-
-            deltaB = np.zeros([self.numSteps])
-            deltaA = np.zeros([self.numSteps])
-
-            rvPrice[0] = self.GetConditionalExpectationSGivenTime()[j, 0]
-            bid[0] = rvPrice[0] - spread / 2.
-            ask[0] = rvPrice[0] + spread / 2.
             for i in range(1, self.numSteps):
-                rvPrice[i] = self.GetConditionalExpectationSGivenTime()[j, i] - n[i - 1] * alpha * \
-                             self.GetConditionalExpectationS2GivenTime()[j, i]
+                self.rvPrice[j, i] = self.GetConditionalExpectationSGivenTime()[j, i] - self.getInventory()[j, i - 1] * \
+                                     alpha * self.GetConditionalExpectationS2GivenTime()[j, i]
 
-                bid[i] = rvPrice[i] - spread / 2.
-                ask[i] = rvPrice[i] + spread / 2.
+                self.bid[j, i] = self.getrvPrice()[j, i] - spread / 2.
+                self.ask[j, i] = self.getrvPrice()[j, i] + spread / 2.
 
-                deltaB[i] = self.S[j, i] - bid[i]
-                deltaA[i] = ask[i] - self.S[j, i]
-                lambdaA = A * np.exp(-k * deltaA[i])
-                ProbA = lambdaA * dt
+                self.deltaB[j, i] = self.getS()[j, i] - self.getBid()[j, i]
+                self.deltaA[j, i] = self.getAsk()[j, i] - self.getS()[j, i]
+
+                self.lambdaA[j, i] = A * np.exp(-k * self.GetDeltaA()[j, i])
+                self.ProbA[j, i] = self.GetLambdaA()[j, i] * dt
                 AskArrival = order[0][j, i]
 
-                lambdaB = A * np.exp(-k * deltaB[i])
-                ProbB = lambdaB * dt
+                self.lambdaB[j, i] = A * np.exp(-k * self.GetDeltaB()[j, i])
+                self.ProbB[j, i] = self.GetLambdaB()[j, i] * dt
                 BidArrival = order[1][j, i]
-
-                if ProbB > BidArrival and ProbA < AskArrival:
-                    n[i] = n[i - 1] + 1
-                    x[i] = x[i - 1] - bid[i]
+                if self.ProbB[j, i] > BidArrival and self.ProbA[j, i] < AskArrival:
+                    self.n[j, i] = self.n[j, i - 1] + 1
+                    self.x[j, i] = self.x[j, i - 1] - self.getBid()[j, i]
                     self.OrderConsumption[j, i] = 1
 
-                if ProbB < BidArrival and ProbA > AskArrival:
-                    n[i] = n[i - 1] - 1
-                    x[i] = x[i - 1] + ask[i]
+                if self.ProbB[j, i] < BidArrival and self.ProbA[j, i] > AskArrival:
+                    self.n[j, i] = self.n[j, i - 1] - 1
+                    self.x[j, i] = self.x[j, i - 1] + self.getAsk()[j, i]
                     self.OrderConsumption[j, i] = 2
-                if ProbB < BidArrival and ProbA < AskArrival:
-                    n[i] = n[i - 1]
-                    x[i] = x[i - 1]
+                if self.ProbB[j, i] < BidArrival and self.ProbA[j, i] < AskArrival:
+                    self.n[j, i] = self.n[j, i - 1]
+                    self.x[j, i] = self.x[j, i - 1]
                     self.OrderConsumption[j, i] = 3
-                if ProbB > BidArrival and ProbA > AskArrival:
-                    n[i] = n[i - 1]
-                    x[i] = x[i - 1] - bid[i] + ask[i]
+                if self.ProbB[j, i] > BidArrival and self.ProbA[j, i] > AskArrival:
+                    self.n[j, i] = self.n[j, i - 1]
+                    self.x[j, i] = self.x[j, i - 1] - self.getBid()[j, i] + self.getAsk()[j, i]
                     self.OrderConsumption[j, i] = 4
 
-                w[i] = x[i] + n[i] * self.S[j, i]
-
-            self.bid[j, :] = bid
-            self.ask[j, :] = ask
-            self.n[j, :] = n
-            self.spread[j, :] = spread
-            self.w[j, :] = w
-            self.rvPrice[j, :] = rvPrice
-            # print('{}/{} completed'.format(self.numRun, self.getnumSims()))
-            # self.numRun += 1
+                self.w[j, i] = self.GetCash()[j, i] + self.getInventory()[j, i] * self.getS()[j, i]
 
 class QGaussianInventoryStrategyOnRealData(MarketMakingStrategy):
     def __init__(self, noise, numSims):
@@ -317,7 +303,7 @@ numSims = 1000
 fkNumPaths = 1000
 t0 = 1e-20
 T = 1
-dt = 0.001
+dt = 0.005
 numSteps = int(T / dt)
 r1 = 0.00044
 sigma1 = 0.01
