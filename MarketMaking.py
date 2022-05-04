@@ -173,8 +173,8 @@ class GBMInventoryStrategy(MarketMakingStrategy):
         MarketMakingStrategy.__init__(self, noise, numSims)
 
     def initializeSimulation(self, r, sigma, S0, alpha, k, A, order):
-        p1 = StockModels.GeometricBrownianMotion(self.noise)
-        p1.generateStockPath(r, sigma, S0)
+        p1 = StockModels.GeneralizedBrownianMotion(self.noise)
+        p1.generateStockPath(r, sigma, S0, q)
         spread = 2 / k + alpha
         self.t = p1.GetTime()
         self.S = p1.GetS()
