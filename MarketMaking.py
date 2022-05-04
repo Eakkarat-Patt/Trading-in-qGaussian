@@ -173,8 +173,8 @@ class GBMInventoryStrategy(MarketMakingStrategy):
         MarketMakingStrategy.__init__(self, noise, numSims)
 
     def initializeSimulation(self, r, sigma, S0, alpha, k, A, order):
-        p1 = StockModels.GeneralizedBrownianMotion(self.noise)
-        p1.generateStockPath(r, sigma, S0, q)
+        p1 = StockModels.GeometricBrownianMotion(self.noise)
+        p1.generateStockPath(r, sigma, S0)
         spread = 2 / k + alpha
         self.t = p1.GetTime()
         self.S = p1.GetS()
@@ -232,7 +232,6 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
     def __init__(self, noise, numSims):
         MarketMakingStrategy.__init__(self, noise, numSims)
         self.q = 0
-        # self.numRun = 1
 
     def GetEntropyIndex(self):
         return self.q
@@ -298,23 +297,23 @@ class QGaussianInventoryStrategyOnRealData(MarketMakingStrategy):
         MarketMakingStrategy.__init__(self, noise, numSims)
 
 
-numPaths = 1000
-numSims = 1000
+numPaths = 5
+numSims = 5
 fkNumPaths = 1000
 t0 = 1e-20
-T = 1
-dt = 0.005
+T = 10
+dt = 0.003
 numSteps = int(T / dt)
-r1 = 0.00044
+r1 = 0.005
 sigma1 = 0.01
-r2 = 0.00045
-sigma2 = 0.011
+r2 = 0.005
+sigma2 = 0.01
 S0 = 1
 q = 1.48
 
 alpha = 0.0001
 k = 100
-A = 1000
+A = 300
 
 mainW = StockModels.WienerProcess()
 mainW.generateWiener(numPaths, numSteps, t0, T)
@@ -325,8 +324,8 @@ order = OrderArrival(numPaths, numSteps)
 mm2 = GBMInventoryStrategy(mainW, numSims)
 mm2.initializeSimulation(r1, sigma1, S0, alpha, k, A, order)
 
-# mm3 = QGaussianInventoryStrategy(mainW, numSims)
-# mm3.initializeSimulation(r2, sigma2, S0, q, alpha, k, A, fkNumPaths, order)
+mm3 = QGaussianInventoryStrategy(mainW, numSims)
+mm3.initializeSimulation(r2, sigma2, S0, q, alpha, k, A, fkNumPaths, order)
 
 # df2 = pd.DataFrame({'Time': mm2.getTime()})
 # for i in range(numSims):
@@ -351,18 +350,22 @@ mm2.initializeSimulation(r1, sigma1, S0, alpha, k, A, order)
 # qg = pd.read_csv('Data/6.12.21/qG alpha=0.0001 k=1.5 A=100 r=0.002 sigma=0.05 q=1.3.csv')
 
 print('mm2 profit mean: ' + str(mm2.getProfit()[:, -1].mean()))
+print('mm3 profit mean: ' + str(mm3.getProfit()[:, -1].mean()))
 print('mm2 profit std: ' + str(mm2.getProfit()[:, -1].std()))
+print('mm3 profit std: ' + str(mm3.getProfit()[:, -1].std()))
 print('mm2 inventory mean: ' + str(mm2.getInventory()[:, -1].mean()))
+print('mm3 inventory mean: ' + str(mm3.getInventory()[:, -1].mean()))
 print('mm2 inventory std: ' + str(mm2.getInventory()[:, -1].std()))
-# print('mm3 profit mean: ' + str(mm3.getProfit()[:, -1].mean()))
-# print('mm3 profit std: ' + str(mm3.getProfit()[:, -1].std()))
-# print('mm3 inventory mean: ' + str(mm3.getInventory()[:, -1].mean()))
-# print('mm3 inventory std: ' + str(mm3.getInventory()[:, -1].std()))
+print('mm3 inventory std: ' + str(mm3.getInventory()[:, -1].std()))
 
 
-def ProfitDistributionPlot(func1):
+
+
+
+def ProfitDistributionPlot(func1, func2):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1.getProfit()[:, -1], bins=50, color='r')
+    sns.histplot(func1.getProfit()[:, -1], binwidth=0.05, binrange=[1, 3], color='r')
+    sns.histplot(func2.getProfit()[:, -1], binwidth=0.05, binrange=[1, 3], color='b')
     # plt.xlim([-50, 150])
     plt.xlim([min(func1.getProfit()[:,-1]), max(func1.getProfit()[:,-1])])
     plt.title('Profit Distribution')
@@ -375,12 +378,25 @@ def DistPlot(func1, title, label=None, logScale=False):
     plt.title(title)
     plt.show()
 
-def SpreadPlot(func):
+def DistPlotMultiple(func1, title, logScale=False):
+    plt.figure(figsize=(8, 5), dpi=500)
+    sns.histplot(func1[0, :], color='r', log_scale=(False, logScale))
+    sns.histplot(func1[4, :], color='g', log_scale=(False, logScale))
+    sns.histplot(func1[8, :], color='b', log_scale=(False, logScale))
+    sns.histplot(func1[16, :], color='y', log_scale=(False, logScale))
+    plt.legend()
+    plt.title(title)
+    plt.show()
+
+def SpreadPlot(func,func2):
     plt.figure(figsize=(8, 5), dpi=500)
     plt.plot(func.getTime(), func.getS()[0, :], label='Stock price')
     plt.plot(func.getTime(), func.getAsk()[0, :], label='Ask price')
     plt.plot(func.getTime(), func.getBid()[0, :], label='Bid price')
     plt.plot(func.getTime(), func.getrvPrice()[0, :], label='Reservation price')
+    plt.plot(func2.getTime(), func2.getAsk()[0, :], label='Ask price')
+    plt.plot(func2.getTime(), func2.getBid()[0, :], label='Bid price')
+    plt.plot(func2.getTime(), func2.getrvPrice()[0, :], label='Reservation price')
     plt.xlim([0.0, func.getTime()[-1]])
     plt.title('Stock price path')
     plt.ylabel('Price')
@@ -401,13 +417,13 @@ def rvPricePlot(x, y1, y2):
     plt.show()
 
 
-def StockPricePlot(x, y1, y2, stop):
+def StrategiesComparisonPlot(x, y1, y2, pathNum, stop, title=None, ylabel=None):
     plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(x[x <= stop], y1[0, x <= stop], label='GBM')
-    plt.plot(x[x <= stop], y2[0, x <= stop], label='qGaussian q={}'.format(mm3.GetEntropyIndex()))
+    plt.plot(x[x <= stop], y1[pathNum, x <= stop], label='GBM')
+    plt.plot(x[x <= stop], y2[pathNum, x <= stop], label='qGaussian q={}'.format(mm3.GetEntropyIndex()))
     plt.xlim([0.0, stop])
-    plt.title('Stock price path')
-    plt.ylabel('Price')
+    plt.title(title)
+    plt.ylabel(ylabel)
     plt.xlabel('Time')
     plt.legend()
     plt.show()
@@ -416,7 +432,7 @@ def StockPricePlot(x, y1, y2, stop):
 def InventoryPlot(x, y1, y2, stop):
     plt.figure(figsize=(8, 5), dpi=500)
     plt.plot(x[x <= stop], y1[2, x <= stop], label='GBM')
-    # plt.plot(x[x <= stop], y2[2, x <= stop], label='qGaussian q={}'.format(mm3.GetEntropyIndex()))
+    plt.plot(x[x <= stop], y2[2, x <= stop], label='qGaussian q={}'.format(mm3.GetEntropyIndex()))
     plt.xlim([0.0, stop])
     plt.title('Share quantity held')
     plt.ylabel('Number of share')
@@ -472,3 +488,4 @@ def BidAskPlot(x, bid1, ask1, bid2, ask2, stop):
     plt.xlabel('$t$')
     plt.legend()
     plt.show()
+

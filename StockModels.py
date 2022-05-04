@@ -86,6 +86,8 @@ class GeometricBrownianMotion(StockPricesModel):
         for i in range(1, self.GetNumSteps()):
             self.S[:, i] = self.S[:, i - 1] * np.exp((r - 0.5 * sigma**2)*(self.GetTime()[i]-self.GetTime()[i-1]) +
                                                      sigma * (self.GetW()[:, i] - self.GetW()[:, i-1]))
+            self.Y[:, i] = self.Y[:, i - 1] + r * (self.GetTime()[i] - self.GetTime()[i - 1]) + sigma * \
+                           (self.GetW()[:, i] - self.GetW()[:, i-1])
 
 
 class GeneralizedBrownianMotion(StockPricesModel):
@@ -130,34 +132,34 @@ class GeneralizedBrownianMotion(StockPricesModel):
             self.Pq[:, i] = ((1 - self.GetB()[i] * (1 - q) * self.GetOmg()[:, i] ** 2) ** (1 / (1 - q))) / self.GetZ()[i]
             self.S[:, i] = self.S[:, i - 1] + (r + (sigma**2 / 2) * self.GetPq()[:, i]**(1-self.GetEntropyIndex())) * \
                            self.S[:, i - 1] * (self.GetTime()[i]-self.GetTime()[i-1])\
-                           + sigma * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
-            self.Y[:, i] = self.Y[:, i - 1] + r * (self.GetTime()[i]-self.GetTime()[i-1]) + sigma * \
+                           + (sigma/1.4678) * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
+            self.Y[:, i] = self.Y[:, i - 1] + r * (self.GetTime()[i]-self.GetTime()[i-1]) + (sigma/1.4678) * \
                            (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
 
 
 
-
-numPaths = 10000
-dt = 0.001
-t0 = 1e-20
-T = 1
-numSteps = int(T / dt)
-r1 = 0.00044
-sigma1 = 0.01
-r2 = 0.0004498
-sigma2 = 1
-S0 = 1
-q = 1.4
-#
-#
-w1 = WienerProcess()
-w1.generateWiener(numPaths, numSteps, t0, T)
+#1.4678
+# numPaths = 10000
+# dt = 0.001
+# t0 = 1e-20
+# T = 1
+# numSteps = int(T / dt)
+# r1 = 0.005
+# sigma1 = 0.01
+# r2 = 0.005
+# sigma2 = 0.01
+# S0 = 1
+# q = 1.48
 # #
-p1 = GeometricBrownianMotion(w1)
-p1.generateStockPath(r1, sigma1, S0)
-#
-p2 = GeneralizedBrownianMotion(w1)
-p2.generateStockPath(r2, sigma2, S0, q)
+# #
+# w1 = WienerProcess()
+# w1.generateWiener(numPaths, numSteps, t0, T)
+# # #
+# p1 = GeometricBrownianMotion(w1)
+# p1.generateStockPath(r1, sigma1, S0)
+# #
+# p2 = GeneralizedBrownianMotion(w1)
+# p2.generateStockPath(r2, sigma2, S0, q)
 #
 # p3 = GeneralizedBrownianMotion(w1)
 # p3.generateStockPath(r, sigma, S0, 1.2)
@@ -168,6 +170,20 @@ p2.generateStockPath(r2, sigma2, S0, q)
 # p5 = GeneralizedBrownianMotion(w1)
 # p5.generateStockPath(r2, sigma2, S0, 1.6)
 
+def stdt(y1, y2):
+    st1 = np.zeros(numSteps)
+    st2 = np.zeros(numSteps)
+    for i in range(numSteps):
+        st1[i] = y1.GetY()[:, i].std()
+        st2[i] = y2.GetY()[:, i].std()
+    return st1, st2
+
+def stdtPlot(y1, y2):
+    plt.figure(figsize=(8, 5), dpi=500)
+    plt.plot(p1.GetTime(), y1, label='GBM')
+    plt.plot(p2.GetTime(), y2, label='Generalized GBM')
+    plt.legend()
+    plt.show()
 
 def estimateDrift(func1, whichPath, process):
     df = pd.DataFrame({'time': func1.GetTime(),
