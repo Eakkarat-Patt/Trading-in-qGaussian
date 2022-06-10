@@ -43,7 +43,7 @@ class WienerProcess(object):
 class StockPricesModel(object):
     def __init__(self, noise):
         self.S = np.zeros([noise.getW().shape[0], noise.getW().shape[1]])
-        self.Y = np.zeros([noise.getW().shape[0], noise.getW().shape[1]]) #return
+        self.Y = np.zeros([noise.getW().shape[0], noise.getW().shape[1]])  # return
         self.W = noise.getW()
         self.t = noise.getTime()
 
@@ -169,48 +169,6 @@ class GeneralizedBrownianMotion(StockPricesModel):
 
 # p5 = GeneralizedBrownianMotion(w1)
 # p5.generateStockPath(r2, sigma2, S0, 1.6)
-
-def stdt(y1, y2):
-    st1 = np.zeros(numSteps)
-    st2 = np.zeros(numSteps)
-    for i in range(numSteps):
-        st1[i] = y1.GetY()[:, i].std()
-        st2[i] = y2.GetY()[:, i].std()
-    return st1, st2
-
-def stdtPlot(y1, y2):
-    plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(p1.GetTime(), y1, label='GBM')
-    plt.plot(p2.GetTime(), y2, label='Generalized GBM')
-    plt.legend()
-    plt.show()
-
-def estimateDrift(func1, whichPath, process):
-    df = pd.DataFrame({'time': func1.GetTime(),
-                       'stock price': func1.GetS()[whichPath, :]})
-    df['increment return'] = np.log(df['stock price'] / df['stock price'].shift(1))
-    r = df['increment return']
-    meanReturn = r.mean()
-    varReturn = r.var()
-    try:
-        if process == 'gBm':
-            mu = (meanReturn + varReturn / 2) / dt
-        elif process == 'qGaussian':
-            alpha = (3 - q) * ((2 - q) * (3 - q) * func1.Getc()) ** ((q - 1) / (3 - q))
-            mu = (meanReturn + varReturn / 2 * alpha * (1 - (1 - q) * func1.GetB()[-1] * func1.GetOmg()[1, -1] ** 2 *
-                                                        func1.GetTime()[-1] ** ((q - 1) / (3 - q)))) / dt
-        return mu
-    except:
-        print('Given process does not exist')
-
-
-def driftDistPlot(path, process):
-    y = [estimateDrift(path, i, process) for i in range(0, numPaths)]
-    y = np.array(y)
-    plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(y, bins=20)
-    plt.title('Estimate Drift Distribution: mu = {}'.format(y.mean()))
-    plt.show()
 
 
 def LogReturn(func1):
