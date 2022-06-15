@@ -305,8 +305,8 @@ numPaths = 500
 numSims = 500
 fkNumPaths = 1000
 t0 = 1e-20
-T = 1
-dt = 0.01
+T = 10
+dt = 0.1
 numSteps = int(T / dt)
 S0 = 10
 
@@ -319,14 +319,14 @@ S0 = 10
 
 #Test params
 r0 = 0.005
-sigma0 = 0.02
+sigma0 = 0.05
 r = 0.005
-sigma = 0.02
-q = 1.5
+sigma = 0.05
+q = 1.3
 
-alpha = 0.0001
+alpha = 0.01
 k = 15
-A = 100
+A = 10
 
 mainW = StockModels.WienerProcess()
 mainW.generateWiener(numPaths, numSteps, t0, T)
@@ -371,8 +371,11 @@ print('mm3 inventory mean: ' + str(mm3.getInventory()[:, -1].mean()))
 print('mm2 inventory std: ' + str(mm2.getInventory()[:, -1].std()))
 print('mm3 inventory std: ' + str(mm3.getInventory()[:, -1].std()))
 
+
 def Savetxt():
     np.savetxt('mm2 Reservation price.txt', mm2.getrvPrice()[:, :], fmt='%1.4f')
+    np.savetxt('mm2 Cash.txt', mm2.GetCash()[:, :], fmt='%1.4f')
+    np.savetxt('mm2 Position.txt', mm2.GetPosition()[:, :], fmt='%1.4f')
     np.savetxt('mm2 Profit.txt', mm2.getProfit()[:, :], fmt='%1.4f')
     np.savetxt('mm2 Inventory.txt', mm2.getInventory()[:, :], fmt='%s')
     np.savetxt('mm2 Bid.txt', mm2.getBid()[:, :], fmt='%1.4f')
@@ -380,13 +383,14 @@ def Savetxt():
     np.savetxt('mm2 Time.txt', mm2.getTime()[:], fmt='%1.4f')
     np.savetxt('mm2 Price.txt', mm2.getS()[:, :], fmt='%1.4f')
     np.savetxt('mm3 Reservation price.txt', mm3.getrvPrice()[:, :], fmt='%1.4f')
+    np.savetxt('mm3 Cash.txt', mm3.GetCash()[:, :], fmt='%1.4f')
+    np.savetxt('mm3 Position.txt', mm3.GetPosition()[:, :], fmt='%1.4f')
     np.savetxt('mm3 Profit.txt', mm3.getProfit()[:, :], fmt='%1.4f')
     np.savetxt('mm3 Inventory.txt', mm3.getInventory()[:, :], fmt='%s')
     np.savetxt('mm3 Bid.txt', mm3.getBid()[:, :], fmt='%1.4f')
     np.savetxt('mm3 Ask.txt', mm3.getAsk()[:, :], fmt='%1.4f')
     np.savetxt('mm3 Time.txt', mm3.getTime()[:], fmt='%1.4f')
     np.savetxt('mm3 Price.txt', mm3.getS()[:, :], fmt='%1.4f')
-
 
 
 def ProbPlot(func1, func2, pathNum, numStep):
@@ -402,26 +406,29 @@ def ProbPlot(func1, func2, pathNum, numStep):
     plt.legend()
     plt.show()
 
+
 def ProbPlot2(x, y1, y2, pathNum, stop):
     plt.figure(figsize=(8, 5), dpi=500)
     plt.scatter(x[x <= stop], y1[pathNum, x <= stop], s=7, label='GBM')
     plt.scatter(x[x <= stop], y2[pathNum, x <= stop], s=7, label='qGaussian q={}'.format(mm3.GetEntropyIndex()))
     plt.scatter(x[x <= stop], order[0][pathNum, x <= stop], s=5, label='iid random number')
     plt.xlim([0, stop])
-    #plt.ylim([1.06, 1.11])
+    # plt.ylim([1.06, 1.11])
     plt.ylabel('Probability')
     plt.xlabel('Time')
     plt.legend()
     plt.show()
 
-def ProfitDistributionPlot(func1, func2):
+
+def DistributionPlot(func1, func2, title, binwidth):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1.getProfit()[:, -1], binwidth=0.05, binrange=[1, 3], color='r')
-    sns.histplot(func2.getProfit()[:, -1], binwidth=0.05, binrange=[1, 3], color='b')
+    sns.histplot(func1[:, -1], binwidth=binwidth, binrange=[func2[:, -1].min(), func2[:, -1].max()], color='r')
+    sns.histplot(func2[:, -1], binwidth=binwidth, binrange=[func2[:, -1].min(), func2[:, -1].max()], color='b')
     # plt.xlim([-50, 150])
-    plt.xlim([min(func1.getProfit()[:,-1]), max(func1.getProfit()[:,-1])])
-    plt.title('Profit Distribution')
+    plt.xlim([min(func1[:, -1]), max(func1[:, -1])])
+    plt.title(title)
     plt.show()
+
 
 def DistPlot(func1, title, label=None, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
@@ -429,6 +436,7 @@ def DistPlot(func1, title, label=None, logScale=False):
     plt.legend()
     plt.title(title)
     plt.show()
+
 
 def DistPlotMultiple(func1, title, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
@@ -439,7 +447,6 @@ def DistPlotMultiple(func1, title, logScale=False):
     plt.legend()
     plt.title(title)
     plt.show()
-
 
 
 def BidPlot(func1, func2, pathNum):
@@ -458,6 +465,7 @@ def BidPlot(func1, func2, pathNum):
     plt.legend()
     plt.show()
 
+
 def AskPlot(func1, func2, pathNum):
     plt.figure(figsize=(8, 5), dpi=500)
     plt.plot(func1.getTime(), func1.getAsk()[pathNum, :], label='GBM')
@@ -474,6 +482,7 @@ def AskPlot(func1, func2, pathNum):
     plt.legend()
     plt.show()
 
+
 def SpreadPlot(func, pathNum, title=None):
     plt.figure(figsize=(8, 5), dpi=500)
     plt.plot(func.getTime(), func.getrvPrice()[pathNum, :], label='Reservation price')
@@ -487,28 +496,17 @@ def SpreadPlot(func, pathNum, title=None):
     plt.legend()
     plt.show()
 
+
 def TimeSeriesPlot(x, y1, y2, pathNum, stop, legend=True, ylabel=None, label1=None, label2=None):
     plt.figure(figsize=(8, 5), dpi=500)
     plt.plot(x[x <= stop], y1[pathNum, x <= stop], label=label1)
     plt.plot(x[x <= stop], y2[pathNum, x <= stop], label=label2)
     plt.xlim([0, stop])
-    #plt.ylim([1.06, 1.11])
+    # plt.ylim([1.06, 1.11])
     plt.ylabel(ylabel)
     plt.xlabel('Time')
     if legend:
         plt.legend()
-    plt.show()
-
-
-def WealthPlot(x, y1, y2, stop):
-    plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(x[x <= stop], y1[4, x <= stop], label='GBM')
-    plt.plot(x[x <= stop], y2[4, x <= stop], label='qGaussian q={}'.format(mm3.GetEntropyIndex()))
-    plt.xlim([0.0, stop])
-    plt.title('Comparison of wealth between two strategies')
-    plt.ylabel('wealth in dollar')
-    plt.xlabel('Time')
-    plt.legend()
     plt.show()
 
 

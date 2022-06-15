@@ -60,12 +60,12 @@ def tradingDay(startDate, stopDate):
 
 # numPaths = 1000
 # t0 = 1e-20
-# dt = 0.005
+# dt = 0.1
 # T = 10
 # numSteps = int(T / dt)
-# r = 0.005
-# sigma = 0.02
-# S0 = 50
+# r = 0.01
+# sigma = 0.2
+# S0 = 10
 # q = 1.5
 # mainW = StockModels.WienerProcess()
 # mainW.generateWiener(1, numSteps, t0, T)

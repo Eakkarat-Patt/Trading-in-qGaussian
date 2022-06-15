@@ -139,17 +139,17 @@ class GeneralizedBrownianMotion(StockPricesModel):
 
 
 #1.4678
-# numPaths = 10000
-# dt = 0.001
+# numPaths = 1000
+# dt = 0.005
 # t0 = 1e-20
-# T = 1
+# T = 10
 # numSteps = int(T / dt)
 # r1 = 0.005
 # sigma1 = 0.01
-# r2 = 0.005
-# sigma2 = 0.01
-# S0 = 1
-# q = 1.48
+# r2 = 0.01
+# sigma2 = 0.1
+# S0 = 10
+# q = 1.56
 # #
 # #
 # w1 = WienerProcess()
@@ -168,7 +168,7 @@ class GeneralizedBrownianMotion(StockPricesModel):
 # p4.generateStockPath(r, sigma, S0, 1.4)
 
 # p5 = GeneralizedBrownianMotion(w1)
-# p5.generateStockPath(r2, sigma2, S0, 1.6)
+# p5.generateStockPath(r2, sigma2, S0, q)
 
 
 def LogReturn(func1):
@@ -222,14 +222,14 @@ def PathPlot(x, y1, numPaths=20):
     plt.show()
 
 
-def PathComparisonPlot(y1, y2, start):
+def TimeSeriesPlot(x, y1, y2, pathNum, stop, legend=True, ylabel=None, label1=None, label2=None):
     plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(y1.GetTime(), y1.GetS()[0, :], label='GBM')
-    plt.plot(y1.GetTime(), y2.GetS()[0, :], label='Generalized GBM q = {}'.format(y2.GetEntropyIndex()))
-    plt.xlim([start, y1.GetTime()[-1]])
-    plt.title('Stock price path')
-    plt.ylabel('Price')
+    plt.plot(x[x <= stop], y1[pathNum, x <= stop], label=label1)
+    plt.plot(x[x <= stop], y2[pathNum, x <= stop], label=label2)
+    plt.xlim([0, stop])
+    # plt.ylim([1.06, 1.11])
+    plt.ylabel(ylabel)
     plt.xlabel('Time')
-    plt.legend()
+    if legend:
+        plt.legend()
     plt.show()
-
