@@ -301,11 +301,11 @@ class QGaussianInventoryStrategyOnRealData(MarketMakingStrategy):
         MarketMakingStrategy.__init__(self, noise, numSims)
 
 
-numPaths = 500
-numSims = 500
+numPaths = 1000
+numSims = 1000
 fkNumPaths = 1000
 t0 = 1e-20
-T = 10
+T = 1
 dt = 0.1
 numSteps = int(T / dt)
 S0 = 10
@@ -324,7 +324,7 @@ r = 0.005
 sigma = 0.05
 q = 1.3
 
-alpha = 0.01
+alpha = 0.0001
 k = 15
 A = 10
 
