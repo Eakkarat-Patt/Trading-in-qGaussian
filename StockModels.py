@@ -132,8 +132,8 @@ class GeneralizedBrownianMotion(StockPricesModel):
             self.Pq[:, i] = ((1 - self.GetB()[i] * (1 - q) * self.GetOmg()[:, i] ** 2) ** (1 / (1 - q))) / self.GetZ()[i]
             self.S[:, i] = self.S[:, i - 1] + (r + (sigma**2 / 2) * self.GetPq()[:, i]**(1-self.GetEntropyIndex())) * \
                            self.S[:, i - 1] * (self.GetTime()[i]-self.GetTime()[i-1])\
-                           + (sigma/1.4678) * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
-            self.Y[:, i] = self.Y[:, i - 1] + r * (self.GetTime()[i]-self.GetTime()[i-1]) + (sigma/1.4678) * \
+                           + (sigma) * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
+            self.Y[:, i] = self.Y[:, i - 1] + r * (self.GetTime()[i]-self.GetTime()[i-1]) + (sigma) * \
                            (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
 
 
@@ -144,14 +144,14 @@ class GeneralizedBrownianMotion(StockPricesModel):
 # t0 = 1e-20
 # T = 10
 # numSteps = int(T / dt)
-# r1 = 0.005
+# r1 = 0.0005
 # sigma1 = 0.01
 # r2 = 0.01
 # sigma2 = 0.1
 # S0 = 10
 # q = 1.56
-# #
-# #
+# # #
+# # #
 # w1 = WienerProcess()
 # w1.generateWiener(numPaths, numSteps, t0, T)
 # # #
@@ -233,3 +233,9 @@ def TimeSeriesPlot(x, y1, y2, pathNum, stop, legend=True, ylabel=None, label1=No
     if legend:
         plt.legend()
     plt.show()
+
+def dw(W):
+    x = np.zeros(W.shape[0])
+    for i in range(1, W.shape[0]):
+        x[i] = W[i]-W[i-1]
+    return x

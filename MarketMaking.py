@@ -177,8 +177,8 @@ class GBMInventoryStrategy(MarketMakingStrategy):
         MarketMakingStrategy.__init__(self, noise, numSims)
 
     def initializeSimulation(self, r, r0, sigma, sigma0, S0, alpha, k, A, order):
-        p1 = StockModels.GeneralizedBrownianMotion(self.noise)
-        p1.generateStockPath(r, sigma, S0, q)
+        p1 = StockModels.GeometricBrownianMotion(self.noise)
+        p1.generateStockPath(r, sigma, S0)
         spread = 2 / k + alpha
         self.t = p1.GetTime()
         self.S = p1.GetS()
@@ -215,7 +215,6 @@ class GBMInventoryStrategy(MarketMakingStrategy):
                     self.n[j, i] = self.n[j, i - 1] + 1
                     self.x[j, i] = self.x[j, i - 1] - self.getBid()[j, i]
                     self.OrderConsumption[j, i] = 1
-
                 if self.ProbB[j, i] < BidArrival and self.ProbA[j, i] > AskArrival:
                     self.n[j, i] = self.n[j, i - 1] - 1
                     self.x[j, i] = self.x[j, i - 1] + self.getAsk()[j, i]
@@ -280,7 +279,6 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
                     self.n[j, i] = self.n[j, i - 1] + 1
                     self.x[j, i] = self.x[j, i - 1] - self.getBid()[j, i]
                     self.OrderConsumption[j, i] = 1
-
                 if self.ProbB[j, i] < BidArrival and self.ProbA[j, i] > AskArrival:
                     self.n[j, i] = self.n[j, i - 1] - 1
                     self.x[j, i] = self.x[j, i - 1] + self.getAsk()[j, i]
@@ -296,19 +294,17 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
                 self.p[j, i] = self.getInventory()[j, i] * self.getS()[j, i]
                 self.w[j, i] = self.GetCash()[j, i] + self.GetPosition()[j, i]
 
-class QGaussianInventoryStrategyOnRealData(MarketMakingStrategy):
-    def __init__(self, noise, numSims):
-        MarketMakingStrategy.__init__(self, noise, numSims)
+
 
 
 numPaths = 1000
 numSims = 1000
-fkNumPaths = 1000
+fkNumPaths = 500
 t0 = 1e-20
 T = 1
-dt = 0.1
+dt = 0.01
 numSteps = int(T / dt)
-S0 = 10
+S0 = 1
 
 # TSLA params
 # r0 = 0.004
@@ -318,15 +314,15 @@ S0 = 10
 # q = 1.5
 
 #Test params
-r0 = 0.005
-sigma0 = 0.05
-r = 0.005
-sigma = 0.05
+r0 = 0.02
+sigma0 = 0.2
+r = 0.02
+sigma = 0.2
 q = 1.3
 
-alpha = 0.0001
-k = 15
-A = 10
+alpha = 0.001
+k = 5
+A = 100
 
 mainW = StockModels.WienerProcess()
 mainW.generateWiener(numPaths, numSteps, t0, T)
@@ -362,6 +358,10 @@ mm3.initializeSimulation(r, sigma, S0, q, alpha, k, A, fkNumPaths, order)
 # gbm = pd.read_csv('Data/6.12.21/GBM alpha=0.0001 k=1.5 A=100 r=0.002 sigma=0.05.csv')
 # qg = pd.read_csv('Data/6.12.21/qG alpha=0.0001 k=1.5 A=100 r=0.002 sigma=0.05 q=1.3.csv')
 
+print('mm2 cash mean: ' + str(mm2.GetCash()[:, -1].mean()))
+print('mm3 cash mean: ' + str(mm3.GetCash()[:, -1].mean()))
+print('mm2 position value mean: ' + str(mm2.GetPosition()[:, -1].mean()))
+print('mm3 position value mean: ' + str(mm3.GetPosition()[:, -1].mean()))
 print('mm2 profit mean: ' + str(mm2.getProfit()[:, -1].mean()))
 print('mm3 profit mean: ' + str(mm3.getProfit()[:, -1].mean()))
 print('mm2 profit std: ' + str(mm2.getProfit()[:, -1].std()))
@@ -382,6 +382,7 @@ def Savetxt():
     np.savetxt('mm2 Ask.txt', mm2.getAsk()[:, :], fmt='%1.4f')
     np.savetxt('mm2 Time.txt', mm2.getTime()[:], fmt='%1.4f')
     np.savetxt('mm2 Price.txt', mm2.getS()[:, :], fmt='%1.4f')
+    np.savetxt('mm2 Order.txt', mm2.GetOrderConsumption()[:, :], fmt='%s')
     np.savetxt('mm3 Reservation price.txt', mm3.getrvPrice()[:, :], fmt='%1.4f')
     np.savetxt('mm3 Cash.txt', mm3.GetCash()[:, :], fmt='%1.4f')
     np.savetxt('mm3 Position.txt', mm3.GetPosition()[:, :], fmt='%1.4f')
@@ -391,6 +392,7 @@ def Savetxt():
     np.savetxt('mm3 Ask.txt', mm3.getAsk()[:, :], fmt='%1.4f')
     np.savetxt('mm3 Time.txt', mm3.getTime()[:], fmt='%1.4f')
     np.savetxt('mm3 Price.txt', mm3.getS()[:, :], fmt='%1.4f')
+    np.savetxt('mm3 Order.txt', mm3.GetOrderConsumption()[:, :], fmt='%s')
 
 
 def ProbPlot(func1, func2, pathNum, numStep):
@@ -497,7 +499,7 @@ def SpreadPlot(func, pathNum, title=None):
     plt.show()
 
 
-def TimeSeriesPlot(x, y1, y2, pathNum, stop, legend=True, ylabel=None, label1=None, label2=None):
+def TimeSeriesPlot(x, y1, y2, pathNum, stop, label1=None, label2=None, legend=True, ylabel=None):
     plt.figure(figsize=(8, 5), dpi=500)
     plt.plot(x[x <= stop], y1[pathNum, x <= stop], label=label1)
     plt.plot(x[x <= stop], y2[pathNum, x <= stop], label=label2)
@@ -507,6 +509,36 @@ def TimeSeriesPlot(x, y1, y2, pathNum, stop, legend=True, ylabel=None, label1=No
     plt.xlabel('Time')
     if legend:
         plt.legend()
+    plt.show()
+
+
+def CashPlot(func1, func2, pathNum):
+    plt.figure(figsize=(8, 5), dpi=500)
+    plt.plot(func1.getTime(), func1.GetCash()[pathNum, :], label='GBM')
+    plt.plot(func2.getTime(), func2.GetCash()[pathNum, :], label='qGaussian')
+    for i in range(0, func1.getnumSteps()):
+        if func1.GetOrderConsumption()[pathNum, i] == 1:
+            a = plt.scatter(func1.getTime()[i], func1.GetCash()[pathNum, i], color='b', s=9)
+        if func1.GetOrderConsumption()[pathNum, i] == 2:
+            b = plt.scatter(func1.getTime()[i], func1.GetCash()[pathNum, i], color='g', s=9)
+        if func1.GetOrderConsumption()[pathNum, i] == 3:
+            c = plt.scatter(func1.getTime()[i], func1.GetCash()[pathNum, i], color='r', s=9)
+        if func1.GetOrderConsumption()[pathNum, i] == 4:
+            d = plt.scatter(func1.getTime()[i], func1.GetCash()[pathNum, i], color='k', s=9)
+        if func2.GetOrderConsumption()[pathNum, i] == 1:
+            plt.scatter(func2.getTime()[i], func2.GetCash()[pathNum, i], color='b', s=9)
+        if func2.GetOrderConsumption()[pathNum, i] == 2:
+            plt.scatter(func2.getTime()[i], func2.GetCash()[pathNum, i], color='g', s=9)
+        if func2.GetOrderConsumption()[pathNum, i] == 3:
+            plt.scatter(func2.getTime()[i], func2.GetCash()[pathNum, i], color='r', s=9)
+        if func2.GetOrderConsumption()[pathNum, i] == 4:
+            plt.scatter(func2.getTime()[i], func2.GetCash()[pathNum, i], color='k', s=9)
+    plt.xlim([0.0, func1.getTime()[-1]])
+    plt.title('Cash vs time')
+    plt.ylabel('Cash')
+    plt.xlabel('Time')
+    plt.legend()
+    plt.legend((a, b, c, d), ('buy', 'sell', 'No matched order', 'both order matched'))
     plt.show()
 
 
