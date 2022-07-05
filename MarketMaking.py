@@ -37,6 +37,8 @@ class MarketMakingStrategy(object):
         self.deltaA = np.zeros([self.numSims, self.numSteps])
         self.deltaB = np.zeros([self.numSims, self.numSteps])
         self.p = np.zeros([self.numSims, self.numSteps])
+        self.bidArrival = np.zeros([self.numSims, self.numSteps])
+        self.askArrival = np.zeros([self.numSims, self.numSteps])
 
     def getProfit(self):
         return self.w
@@ -100,6 +102,12 @@ class MarketMakingStrategy(object):
 
     def GetPosition(self):
         return self.p
+
+    def GetBidArrival(self):
+        return self.bidArrival
+
+    def GetAskArrival(self):
+        return self.askArrival
 
 
 class BasicInventoryStrategy(MarketMakingStrategy):
@@ -177,13 +185,15 @@ class GBMInventoryStrategy(MarketMakingStrategy):
         MarketMakingStrategy.__init__(self, noise, numSims)
 
     def initializeSimulation(self, r, r0, sigma, sigma0, S0, alpha, k, A, order):
-        p1 = StockModels.GeometricBrownianMotion(self.noise)
-        p1.generateStockPath(r, sigma, S0)
+        p1 = StockModels.GeneralizedBrownianMotion(self.noise)
+        p1.generateStockPath(r, sigma, S0, q)
         spread = 2 / k + alpha
         self.t = p1.GetTime()
         self.S = p1.GetS()
         self.ConditionalExpectationSGivenTime = self.getS() * np.exp(r0 * (T-self.getTime()))
         self.ConditionalExpectationS2GivenTime = self.getS()**2 * (np.exp((2 * r0 + sigma0**2) * (T - self.getTime())))
+        self.askArrival = order[0]
+        self.bidArrival = order[1]
         self.rvPrice[:, 0] = self.GetConditionalExpectationSGivenTime()[:, 0]
         self.bid[:, 0] = self.getrvPrice()[:, 0] - spread / 2
         self.ask[:, 0] = self.getrvPrice()[:, 0] + spread / 2
@@ -206,24 +216,24 @@ class GBMInventoryStrategy(MarketMakingStrategy):
 
                 self.lambdaA[j, i] = A * np.exp(-k * self.GetDeltaA()[j, i])
                 self.ProbA[j, i] = self.GetLambdaA()[j, i] * dt
-                AskArrival = order[0][j, i]
+
 
                 self.lambdaB[j, i] = A * np.exp(-k * self.GetDeltaB()[j, i])
                 self.ProbB[j, i] = self.GetLambdaB()[j, i] * dt
-                BidArrival = order[1][j, i]
-                if self.ProbB[j, i] > BidArrival and self.ProbA[j, i] < AskArrival:
+
+                if self.ProbB[j, i] > self.GetBidArrival()[j, i] and self.ProbA[j, i] < self.GetAskArrival()[j, i]:
                     self.n[j, i] = self.n[j, i - 1] + 1
                     self.x[j, i] = self.x[j, i - 1] - self.getBid()[j, i]
                     self.OrderConsumption[j, i] = 1
-                if self.ProbB[j, i] < BidArrival and self.ProbA[j, i] > AskArrival:
+                if self.ProbB[j, i] < self.GetBidArrival()[j, i] and self.ProbA[j, i] > self.GetAskArrival()[j, i]:
                     self.n[j, i] = self.n[j, i - 1] - 1
                     self.x[j, i] = self.x[j, i - 1] + self.getAsk()[j, i]
                     self.OrderConsumption[j, i] = 2
-                if self.ProbB[j, i] < BidArrival and self.ProbA[j, i] < AskArrival:
+                if self.ProbB[j, i] < self.GetBidArrival()[j, i] and self.ProbA[j, i] < self.GetAskArrival()[j, i]:
                     self.n[j, i] = self.n[j, i - 1]
                     self.x[j, i] = self.x[j, i - 1]
                     self.OrderConsumption[j, i] = 3
-                if self.ProbB[j, i] > BidArrival and self.ProbA[j, i] > AskArrival:
+                if self.ProbB[j, i] > self.GetBidArrival()[j, i] and self.ProbA[j, i] > self.GetAskArrival()[j, i]:
                     self.n[j, i] = self.n[j, i - 1]
                     self.x[j, i] = self.x[j, i - 1] - self.getBid()[j, i] + self.getAsk()[j, i]
                     self.OrderConsumption[j, i] = 4
@@ -248,6 +258,8 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
         self.t = f1.getTime()
         self.q = q
         spread = 2 / k + alpha
+        self.askArrival = order[0]
+        self.bidArrival = order[1]
         self.rvPrice[:, 0] = self.GetConditionalExpectationSGivenTime()[:, 0]
         self.bid[:, 0] = self.getrvPrice()[:, 0] - spread / 2
         self.ask[:, 0] = self.getrvPrice()[:, 0] + spread / 2
@@ -270,24 +282,24 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
 
                 self.lambdaA[j, i] = A * np.exp(-k * self.GetDeltaA()[j, i])
                 self.ProbA[j, i] = self.GetLambdaA()[j, i] * dt
-                AskArrival = order[0][j, i]
+
 
                 self.lambdaB[j, i] = A * np.exp(-k * self.GetDeltaB()[j, i])
                 self.ProbB[j, i] = self.GetLambdaB()[j, i] * dt
-                BidArrival = order[1][j, i]
-                if self.ProbB[j, i] > BidArrival and self.ProbA[j, i] < AskArrival:
+
+                if self.ProbB[j, i] > self.GetBidArrival()[j, i] and self.ProbA[j, i] < self.GetAskArrival()[j, i]:
                     self.n[j, i] = self.n[j, i - 1] + 1
                     self.x[j, i] = self.x[j, i - 1] - self.getBid()[j, i]
                     self.OrderConsumption[j, i] = 1
-                if self.ProbB[j, i] < BidArrival and self.ProbA[j, i] > AskArrival:
+                if self.ProbB[j, i] < self.GetBidArrival()[j, i] and self.ProbA[j, i] > self.GetAskArrival()[j, i]:
                     self.n[j, i] = self.n[j, i - 1] - 1
                     self.x[j, i] = self.x[j, i - 1] + self.getAsk()[j, i]
                     self.OrderConsumption[j, i] = 2
-                if self.ProbB[j, i] < BidArrival and self.ProbA[j, i] < AskArrival:
+                if self.ProbB[j, i] < self.GetBidArrival()[j, i] and self.ProbA[j, i] < self.GetAskArrival()[j, i]:
                     self.n[j, i] = self.n[j, i - 1]
                     self.x[j, i] = self.x[j, i - 1]
                     self.OrderConsumption[j, i] = 3
-                if self.ProbB[j, i] > BidArrival and self.ProbA[j, i] > AskArrival:
+                if self.ProbB[j, i] > self.GetBidArrival()[j, i] and self.ProbA[j, i] > self.GetAskArrival()[j, i]:
                     self.n[j, i] = self.n[j, i - 1]
                     self.x[j, i] = self.x[j, i - 1] - self.getBid()[j, i] + self.getAsk()[j, i]
                     self.OrderConsumption[j, i] = 4
@@ -318,10 +330,10 @@ r0 = 0.02
 sigma0 = 0.2
 r = 0.02
 sigma = 0.2
-q = 1.3
+q = 1.4
 
-alpha = 0.001
-k = 5
+alpha = 0.0001
+k = 10
 A = 100
 
 mainW = StockModels.WienerProcess()
@@ -503,6 +515,20 @@ def TimeSeriesPlot(x, y1, y2, pathNum, stop, label1=None, label2=None, legend=Tr
     plt.figure(figsize=(8, 5), dpi=500)
     plt.plot(x[x <= stop], y1[pathNum, x <= stop], label=label1)
     plt.plot(x[x <= stop], y2[pathNum, x <= stop], label=label2)
+    plt.xlim([0, stop])
+    # plt.ylim([1.06, 1.11])
+    plt.ylabel(ylabel)
+    plt.xlabel('Time')
+    if legend:
+        plt.legend()
+    plt.show()
+
+
+def TimeSeriesPlot2(x, y1, y2, y3, pathNum, stop, label1=None, label2=None, label3=None, legend=True, ylabel=None):
+    plt.figure(figsize=(8, 5), dpi=500)
+    plt.plot(x[x <= stop], y1[pathNum, x <= stop], label=label1)
+    plt.plot(x[x <= stop], y2[pathNum, x <= stop], label=label2)
+    plt.plot(x[x <= stop], y3[pathNum, x <= stop], label=label3)
     plt.xlim([0, stop])
     # plt.ylim([1.06, 1.11])
     plt.ylabel(ylabel)
