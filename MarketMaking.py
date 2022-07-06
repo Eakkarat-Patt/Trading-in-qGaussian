@@ -185,8 +185,8 @@ class GBMInventoryStrategy(MarketMakingStrategy):
         MarketMakingStrategy.__init__(self, noise, numSims)
 
     def initializeSimulation(self, r, r0, sigma, sigma0, S0, alpha, k, A, order):
-        p1 = StockModels.GeneralizedBrownianMotion(self.noise)
-        p1.generateStockPath(r, sigma, S0, q)
+        p1 = StockModels.GeometricBrownianMotion(self.noise)
+        p1.generateStockPath(r, sigma, S0)
         spread = 2 / k + alpha
         self.t = p1.GetTime()
         self.S = p1.GetS()
@@ -217,6 +217,66 @@ class GBMInventoryStrategy(MarketMakingStrategy):
                 self.lambdaA[j, i] = A * np.exp(-k * self.GetDeltaA()[j, i])
                 self.ProbA[j, i] = self.GetLambdaA()[j, i] * dt
 
+
+                self.lambdaB[j, i] = A * np.exp(-k * self.GetDeltaB()[j, i])
+                self.ProbB[j, i] = self.GetLambdaB()[j, i] * dt
+
+                if self.ProbB[j, i] > self.GetBidArrival()[j, i] and self.ProbA[j, i] < self.GetAskArrival()[j, i]:
+                    self.n[j, i] = self.n[j, i - 1] + 1
+                    self.x[j, i] = self.x[j, i - 1] - self.getBid()[j, i]
+                    self.OrderConsumption[j, i] = 1
+                if self.ProbB[j, i] < self.GetBidArrival()[j, i] and self.ProbA[j, i] > self.GetAskArrival()[j, i]:
+                    self.n[j, i] = self.n[j, i - 1] - 1
+                    self.x[j, i] = self.x[j, i - 1] + self.getAsk()[j, i]
+                    self.OrderConsumption[j, i] = 2
+                if self.ProbB[j, i] < self.GetBidArrival()[j, i] and self.ProbA[j, i] < self.GetAskArrival()[j, i]:
+                    self.n[j, i] = self.n[j, i - 1]
+                    self.x[j, i] = self.x[j, i - 1]
+                    self.OrderConsumption[j, i] = 3
+                if self.ProbB[j, i] > self.GetBidArrival()[j, i] and self.ProbA[j, i] > self.GetAskArrival()[j, i]:
+                    self.n[j, i] = self.n[j, i - 1]
+                    self.x[j, i] = self.x[j, i - 1] - self.getBid()[j, i] + self.getAsk()[j, i]
+                    self.OrderConsumption[j, i] = 4
+                self.p[j, i] = self.getInventory()[j, i] * self.getS()[j, i]
+                self.w[j, i] = self.GetCash()[j, i] + self.GetPosition()[j, i]
+
+
+class GBMInventoryStrategy2(MarketMakingStrategy):
+    def __init__(self, noise, numSims):
+        MarketMakingStrategy.__init__(self, noise, numSims)
+
+    def initializeSimulation(self, r, r0, sigma, sigma0, S0, alpha, k, A, order):
+        f1 = fk.FeynmanKacFormula(self.noise, fkNumPaths)
+        f1.generatePathTest(r, sigma, S0)
+        self.ConditionalExpectationSGivenTime = f1.getConditionalExpectationS()
+        self.ConditionalExpectationS2GivenTime = f1.getConditionalExpectationS2()
+        self.S = f1.getMainPath()
+        self.t = f1.getTime()
+        spread = 2 / k + alpha
+        self.askArrival = order[0]
+        self.bidArrival = order[1]
+        self.rvPrice[:, 0] = self.GetConditionalExpectationSGivenTime()[:, 0]
+        self.bid[:, 0] = self.getrvPrice()[:, 0] - spread / 2
+        self.ask[:, 0] = self.getrvPrice()[:, 0] + spread / 2
+        self.deltaA[:, 0] = self.getAsk()[:, 0] - self.getS()[:, 0]
+        self.deltaB[:, 0] = self.getS()[:, 0] - self.getBid()[:, 0]
+        self.lambdaA[:, 0] = A * np.exp(-k * self.GetDeltaA()[:, 0])
+        self.lambdaB[:, 0] = A * np.exp(-k * self.GetDeltaB()[:, 0])
+        self.ProbA[:, 0] = self.GetLambdaA()[:, 0] * dt
+        self.ProbB[:, 0] = self.GetLambdaB()[:, 0] * dt
+        for j in range(0, self.numSims):
+            for i in range(1, self.numSteps):
+                self.rvPrice[j, i] = self.GetConditionalExpectationSGivenTime()[j, i] - self.getInventory()[j, i-1] * alpha * \
+                             self.GetConditionalExpectationS2GivenTime()[j, i]
+
+                self.bid[j, i] = self.getrvPrice()[j, i] - spread / 2.
+                self.ask[j, i] = self.getrvPrice()[j, i] + spread / 2.
+
+                self.deltaB[j, i] = self.getS()[j, i] - self.getBid()[j, i]
+                self.deltaA[j, i] = self.getAsk()[j, i] - self.getS()[j, i]
+
+                self.lambdaA[j, i] = A * np.exp(-k * self.GetDeltaA()[j, i])
+                self.ProbA[j, i] = self.GetLambdaA()[j, i] * dt
 
                 self.lambdaB[j, i] = A * np.exp(-k * self.GetDeltaB()[j, i])
                 self.ProbB[j, i] = self.GetLambdaB()[j, i] * dt
@@ -345,8 +405,10 @@ order = OrderArrival(numPaths, numSteps)
 mm2 = GBMInventoryStrategy(mainW, numSims)
 mm2.initializeSimulation(r, r0, sigma, sigma0, S0, alpha, k, A, order)
 
-mm3 = QGaussianInventoryStrategy(mainW, numSims)
-mm3.initializeSimulation(r, sigma, S0, q, alpha, k, A, fkNumPaths, order)
+mm2test = GBMInventoryStrategy2(mainW, numSims)
+mm2test.initializeSimulation(r, r0, sigma, sigma0, S0, alpha, k, A, order)
+# mm3 = QGaussianInventoryStrategy(mainW, numSims)
+# mm3.initializeSimulation(r, sigma, S0, q, alpha, k, A, fkNumPaths, order)
 
 # df2 = pd.DataFrame({'Time': mm2.getTime()})
 # for i in range(numSims):
@@ -371,17 +433,17 @@ mm3.initializeSimulation(r, sigma, S0, q, alpha, k, A, fkNumPaths, order)
 # qg = pd.read_csv('Data/6.12.21/qG alpha=0.0001 k=1.5 A=100 r=0.002 sigma=0.05 q=1.3.csv')
 
 print('mm2 cash mean: ' + str(mm2.GetCash()[:, -1].mean()))
-print('mm3 cash mean: ' + str(mm3.GetCash()[:, -1].mean()))
+print('mm2test cash mean: ' + str(mm2test.GetCash()[:, -1].mean()))
 print('mm2 position value mean: ' + str(mm2.GetPosition()[:, -1].mean()))
-print('mm3 position value mean: ' + str(mm3.GetPosition()[:, -1].mean()))
+print('mm2test position value mean: ' + str(mm2test.GetPosition()[:, -1].mean()))
 print('mm2 profit mean: ' + str(mm2.getProfit()[:, -1].mean()))
-print('mm3 profit mean: ' + str(mm3.getProfit()[:, -1].mean()))
+print('mm2test profit mean: ' + str(mm2test.getProfit()[:, -1].mean()))
 print('mm2 profit std: ' + str(mm2.getProfit()[:, -1].std()))
-print('mm3 profit std: ' + str(mm3.getProfit()[:, -1].std()))
+print('mm2test profit std: ' + str(mm2test.getProfit()[:, -1].std()))
 print('mm2 inventory mean: ' + str(mm2.getInventory()[:, -1].mean()))
-print('mm3 inventory mean: ' + str(mm3.getInventory()[:, -1].mean()))
+print('mm2test inventory mean: ' + str(mm2test.getInventory()[:, -1].mean()))
 print('mm2 inventory std: ' + str(mm2.getInventory()[:, -1].std()))
-print('mm3 inventory std: ' + str(mm3.getInventory()[:, -1].std()))
+print('mm2test inventory std: ' + str(mm2test.getInventory()[:, -1].std()))
 
 
 def Savetxt():
