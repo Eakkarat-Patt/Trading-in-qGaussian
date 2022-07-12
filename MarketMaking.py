@@ -326,13 +326,13 @@ S0 = 1
 # q = 1.5
 
 #Test params
-r0 = 0.02
+r0 = -0.02
 sigma0 = 0.2
-r = 0.02
+r = -0.02
 sigma = 0.2
 q = 1.4
 
-alpha = 0.0001
+alpha = 0.01
 k = 10
 A = 100
 
@@ -395,6 +395,10 @@ def Savetxt():
     np.savetxt('mm2 Time.txt', mm2.getTime()[:], fmt='%1.4f')
     np.savetxt('mm2 Price.txt', mm2.getS()[:, :], fmt='%1.4f')
     np.savetxt('mm2 Order.txt', mm2.GetOrderConsumption()[:, :], fmt='%s')
+    np.savetxt('mm2 DeltaA.txt', mm2.GetDeltaA()[:, :], fmt='%1.4f')
+    np.savetxt('mm2 DeltaB.txt', mm2.GetDeltaB()[:, :], fmt='%1.4f')
+    np.savetxt('mm2 ProbA.txt', mm2.GetProbA()[:, :], fmt='%1.4f')
+    np.savetxt('mm2 ProbB.txt', mm2.GetProbB()[:, :], fmt='%1.4f')
     np.savetxt('mm3 Reservation price.txt', mm3.getrvPrice()[:, :], fmt='%1.4f')
     np.savetxt('mm3 Cash.txt', mm3.GetCash()[:, :], fmt='%1.4f')
     np.savetxt('mm3 Position.txt', mm3.GetPosition()[:, :], fmt='%1.4f')
@@ -405,6 +409,11 @@ def Savetxt():
     np.savetxt('mm3 Time.txt', mm3.getTime()[:], fmt='%1.4f')
     np.savetxt('mm3 Price.txt', mm3.getS()[:, :], fmt='%1.4f')
     np.savetxt('mm3 Order.txt', mm3.GetOrderConsumption()[:, :], fmt='%s')
+    np.savetxt('mm3 DeltaA.txt', mm3.GetDeltaA()[:, :], fmt='%1.4f')
+    np.savetxt('mm3 DeltaB.txt', mm3.GetDeltaB()[:, :], fmt='%1.4f')
+    np.savetxt('mm3 ProbA.txt', mm3.GetProbA()[:, :], fmt='%1.4f')
+    np.savetxt('mm3 ProbB.txt', mm3.GetProbB()[:, :], fmt='%1.4f')
+
 
 
 def ProbPlot(func1, func2, pathNum, numStep):
