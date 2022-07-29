@@ -319,20 +319,20 @@ numSteps = int(T / dt)
 S0 = 1
 
 # TSLA params
-# r0 = 0.004
-# sigma0 = 0.068
-# r = 0.003
-# sigma = 0.044
-# q = 1.5
+r0 = 0.04
+sigma0 = 0.68
+r = 0.03
+sigma = 0.44
+q = 1.56
 
 #Test params
-r0 = -0.02
-sigma0 = 0.2
-r = -0.02
-sigma = 0.2
-q = 1.4
+# r0 = -0.02
+# sigma0 = 0.2
+# r = -0.02
+# sigma = 0.2
+# q = 1.4
 
-alpha = 0.01
+alpha = 0.0001
 k = 10
 A = 100
 
@@ -347,6 +347,8 @@ mm2.initializeSimulation(r, r0, sigma, sigma0, S0, alpha, k, A, order)
 
 mm3 = QGaussianInventoryStrategy(mainW, numSims)
 mm3.initializeSimulation(r, sigma, S0, q, alpha, k, A, fkNumPaths, order)
+
+# np.count_nonzero(mm2.GetOrderConsumption()==1) +np.count_nonzero(mm2.GetOrderConsumption()==2)+2*np.count_nonzero(mm2.GetOrderConsumption()==4)
 
 # df2 = pd.DataFrame({'Time': mm2.getTime()})
 # for i in range(numSims):

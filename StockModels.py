@@ -132,35 +132,35 @@ class GeneralizedBrownianMotion(StockPricesModel):
             self.Pq[:, i] = ((1 - self.GetB()[i] * (1 - q) * self.GetOmg()[:, i] ** 2) ** (1 / (1 - q))) / self.GetZ()[i]
             self.S[:, i] = self.S[:, i - 1] + (r + (sigma**2 / 2) * self.GetPq()[:, i]**(1-self.GetEntropyIndex())) * \
                            self.S[:, i - 1] * (self.GetTime()[i]-self.GetTime()[i-1])\
-                           + (sigma) * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
+                           + (sigma/1.4678) * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
             self.Y[:, i] = self.Y[:, i - 1] + r * (self.GetTime()[i]-self.GetTime()[i-1]) + (sigma) * \
                            (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
 
 
 
 #1.4678
-# numPaths = 1000
-# dt = 0.005
-# t0 = 1e-20
-# T = 10
-# numSteps = int(T / dt)
-# r1 = 0.0005
-# sigma1 = 0.01
-# r2 = 0.01
-# sigma2 = 0.1
-# S0 = 10
-# q = 1.56
-# # #
-# # #
+numPaths = 1
+dt = 0.001
+t0 = 1e-20
+T = 1
+numSteps = int(T / dt)
+r1 = 0.05
+sigma1 = 0.1
+r2 = 0.05
+sigma2 = 0.1
+S0 = 1
+q = 1.5
+
+
 # w1 = WienerProcess()
 # w1.generateWiener(numPaths, numSteps, t0, T)
-# # #
+#
 # p1 = GeometricBrownianMotion(w1)
 # p1.generateStockPath(r1, sigma1, S0)
-# #
+#
 # p2 = GeneralizedBrownianMotion(w1)
 # p2.generateStockPath(r2, sigma2, S0, q)
-#
+
 # p3 = GeneralizedBrownianMotion(w1)
 # p3.generateStockPath(r, sigma, S0, 1.2)
 #
@@ -171,6 +171,45 @@ class GeneralizedBrownianMotion(StockPricesModel):
 # p5.generateStockPath(r2, sigma2, S0, q)
 
 
+
+def DriftEstimate(numSims=1000):
+    avg11 = np.zeros([numSims])
+    avg12 = np.zeros([numSims])
+    avg13 = np.zeros([numSims])
+    avg21 = np.zeros([numSims])
+    avg22 = np.zeros([numSims])
+    avg23 = np.zeros([numSims])
+    for i in range(numSims):
+        w1 = WienerProcess()
+        w1.generateWiener(numPaths, numSteps, t0, T)
+        p1 = GeometricBrownianMotion(w1)
+        p1.generateStockPath(r1, sigma1, S0)
+        p2 = GeneralizedBrownianMotion(w1)
+        p2.generateStockPath(r2, sigma2, S0, q)
+        df1 = pd.DataFrame(p1.GetS())
+        df2 = pd.DataFrame(p2.GetS())
+        df1 = df1.transpose()
+        df2 = df2.transpose()
+        df1['return'] = (df1[0] - df1[0].shift(1)) / df1[0].shift(1)
+        df1['log return'] = np.log(df1[0] / df1[0].shift(1))
+        df2['return'] = (df2[0] - df2[0].shift(1)) / df2[0].shift(1)
+        df2['log return'] = np.log(df2[0] / df2[0].shift(1))
+        avg11[i] = df1['return'].mean()/dt
+        avg12[i] = df1['log return'].mean()/dt
+        avg13[i] = (df1['log return'].mean() + df1['log return'].var() / 2) / dt
+        avg21[i] = df2['return'].mean()/dt
+        avg22[i] = df2['log return'].mean()/dt
+        avg23[i] = (df2['log return'].mean() + df2['log return'].var() / 2) / dt
+    print('True value: mu', r1, "sigma ", sigma1)
+    print("GBM method 1: mu", avg11.mean(), "sigma ", avg11.std())
+    print("GBM method 2: mu", avg12.mean(), "sigma ", avg12.std())
+    print("GMB method 3 : mu", avg13.mean(), "sigma ", avg13.std())
+    print("qGaussian method 1: mu", avg21.mean(), "sigma ", avg21.std())
+    print("qGaussian method 2: mu", avg22.mean(), "sigma ", avg22.std())
+    print("qGaussian method 3: mu", avg23.mean(), "sigma ", avg23.std())
+#  + df2['method2'].var()/2)/dt
+DriftEstimate()
+
 def LogReturn(func1):
     df = pd.DataFrame({'time': func1.GetTime(),
                        'stock price': func1.GetS()[0, :]})
@@ -178,13 +217,13 @@ def LogReturn(func1):
     #df['daily log return'] = (df['daily log return'] - df['daily log return'].mean()) / df['daily log return'].std()  # standardization
     return df['daily log return']
 
+
 def DistPlot(func1, logScale=False):
     plt.figure(figsize=(8, 5), dpi=500)
     sns.histplot(func1, label='Gaussian', log_scale=(False, logScale))
     plt.legend()
     plt.title('Terminal Time Stock Price Distribution')
     plt.show()
-
 
 
 def CompareDistPlot(func1, func2, logScale=False):
@@ -210,9 +249,9 @@ def ReturnDistributionPlot(func1, logScale=False):
 
 
 def PathPlot(x, y1, numPaths=20):
-    '''
+    """
     plot stock path
-    '''
+    """
     plt.figure(figsize=(8, 5), dpi=500)
     for i in range(numPaths):
         plt.plot(x, y1[i, :])
@@ -233,6 +272,7 @@ def TimeSeriesPlot(x, y1, y2, pathNum, stop, legend=True, ylabel=None, label1=No
     if legend:
         plt.legend()
     plt.show()
+
 
 def dw(W):
     x = np.zeros(W.shape[0])

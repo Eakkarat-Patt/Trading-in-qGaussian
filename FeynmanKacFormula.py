@@ -76,21 +76,21 @@ class FeynmanKacFormula(object):
 
 
 
-# numPaths = 1000
-# t0 = 1e-20
-# dt = 0.01
-# T = 1
-# numSteps = int(T / dt)
-# r = 0.01
-# sigma = 0.2
-# S0 = 10
-# q = 1.5
-# mainW = StockModels.WienerProcess()
-# mainW.generateWiener(100, numSteps, t0, T)
-# f1 = FeynmanKacFormula(mainW, numPaths)
-# f1.generatePathTest(r, sigma, S0)
-# # p2 = StockModels.GeneralizedBrownianMotion(mainW)
-# # p2.generateStockPath(r, sigma, S0, q)
+numPaths = 1000
+t0 = 1e-20
+dt = 0.01
+T = 1
+numSteps = int(T / dt)
+r = 0.01
+sigma = 0.2
+S0 = 10
+q = 1.5
+mainW = StockModels.WienerProcess()
+mainW.generateWiener(500, numSteps, t0, T)
+f1 = FeynmanKacFormula(mainW, numPaths)
+f1.generatePathTest(r, sigma, S0)
+# p2 = StockModels.GeneralizedBrownianMotion(mainW)
+# p2.generateStockPath(r, sigma, S0, q)
 #
 
 def ExpectationPlot(func):
