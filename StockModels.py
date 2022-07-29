@@ -139,17 +139,17 @@ class GeneralizedBrownianMotion(StockPricesModel):
 
 
 #1.4678
-numPaths = 1
-dt = 0.001
-t0 = 1e-20
-T = 1
-numSteps = int(T / dt)
-r1 = 0.05
-sigma1 = 0.1
-r2 = 0.05
-sigma2 = 0.1
-S0 = 1
-q = 1.5
+# numPaths = 1
+# dt = 0.001
+# t0 = 1e-20
+# T = 1
+# numSteps = int(T / dt)
+# r1 = 0.05
+# sigma1 = 0.1
+# r2 = 0.05
+# sigma2 = 0.1
+# S0 = 1
+# q = 1.5
 
 
 # w1 = WienerProcess()
@@ -208,7 +208,7 @@ def DriftEstimate(numSims=1000):
     print("qGaussian method 2: mu", avg22.mean(), "sigma ", avg22.std())
     print("qGaussian method 3: mu", avg23.mean(), "sigma ", avg23.std())
 #  + df2['method2'].var()/2)/dt
-DriftEstimate()
+# DriftEstimate()
 
 def LogReturn(func1):
     df = pd.DataFrame({'time': func1.GetTime(),
