@@ -4,6 +4,7 @@ import seaborn as sns
 import StockModels
 import FeynmanKacFormula as fk
 from scipy.stats import skew
+from scipy.stats import kurtosis
 import pandas as pd
 
 
@@ -307,9 +308,6 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
                 self.w[j, i] = self.GetCash()[j, i] + self.GetPosition()[j, i]
 
 
-
-
-numPaths = 1000
 numSims = 1000
 fkNumPaths = 500
 t0 = 1e-20
@@ -319,27 +317,27 @@ numSteps = int(T / dt)
 S0 = 1
 
 # TSLA params
-r0 = 0.04
-sigma0 = 0.68
-r = 0.03
-sigma = 0.44
-q = 1.56
+# r0 = 0.01
+# sigma0 = 0.056
+# r = 0.01
+# sigma = 0.06
+# q = 1.456
 
 #Test params
-# r0 = -0.02
-# sigma0 = 0.2
-# r = -0.02
-# sigma = 0.2
-# q = 1.4
+r0 = 0.05
+sigma0 = 0.5
+r = 0.05
+sigma = 0.5
+q = 1.456
 
-alpha = 0.0001
+alpha = 0.001
 k = 10
 A = 100
 
 mainW = StockModels.WienerProcess()
-mainW.generateWiener(numPaths, numSteps, t0, T)
+mainW.generateWiener(numSims, numSteps, t0, T)
 
-order = OrderArrival(numPaths, numSteps)
+order = OrderArrival(numSims, numSteps)
 
 
 mm2 = GBMInventoryStrategy(mainW, numSims)
