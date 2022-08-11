@@ -324,13 +324,13 @@ S0 = 1
 # q = 1.456
 
 #Test params
-r0 = 0.05
-sigma0 = 0.5
-r = 0.05
-sigma = 0.5
+r0 = 0.01
+sigma0 = 0.05
+r = 0.01
+sigma = 0.05
 q = 1.456
 
-alpha = 0.001
+alpha = 0.0001
 k = 10
 A = 100
 

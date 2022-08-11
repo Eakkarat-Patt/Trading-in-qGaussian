@@ -130,26 +130,26 @@ class GeneralizedBrownianMotion(StockPricesModel):
 
             self.Omg[:, i] = self.Omg[:, i - 1] + self.GetPq()[:, i-1]**((1-q)/2) * (self.GetW()[:, i] - self.GetW()[:, i - 1])
             self.Pq[:, i] = ((1 - self.GetB()[i] * (1 - q) * self.GetOmg()[:, i] ** 2) ** (1 / (1 - q))) / self.GetZ()[i]
-            self.S[:, i] = self.S[:, i - 1] + (r + (sigma**2 / 2) * self.GetPq()[:, i]**(1-self.GetEntropyIndex())) * \
+            self.S[:, i] = self.S[:, i - 1] + (r) * \
                            self.S[:, i - 1] * (self.GetTime()[i]-self.GetTime()[i-1])\
-                           + (sigma/1.4678) * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
+                           + (sigma) * self.S[:, i - 1] * (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
             self.Y[:, i] = self.Y[:, i - 1] + r * (self.GetTime()[i]-self.GetTime()[i-1]) + (sigma) * \
                            (self.GetOmg()[:, i] - self.GetOmg()[:, i - 1])
 
 
-
+ # + (sigma**2 / 2) * self.GetPq()[:, i]**(1-self.GetEntropyIndex())
 #1.4678
-numPaths = 1
-dt = 0.001
-t0 = 1e-20
-T = 1
-numSteps = int(T / dt)
-r1 = 0.05
-sigma1 = 0.1
-r2 = 0.05
-sigma2 = 0.1
-S0 = 1
-q = 1.5
+# numPaths = 1
+# dt = 0.001
+# t0 = 1e-20
+# T = 1
+# numSteps = int(T / dt)
+# r1 = 0.05
+# sigma1 = 0.1
+# r2 = 0.05
+# sigma2 = 0.1
+# S0 = 1
+# q = 1.5
 
 
 # w1 = WienerProcess()
@@ -208,7 +208,7 @@ def DriftEstimate(numSims=1000):
     print("qGaussian method 2: mu", avg22.mean(), "sigma ", avg22.std())
     print("qGaussian method 3: mu", avg23.mean(), "sigma ", avg23.std())
 #  + df2['method2'].var()/2)/dt
-DriftEstimate()
+# DriftEstimate()
 
 def LogReturn(func1):
     df = pd.DataFrame({'time': func1.GetTime(),
