@@ -331,7 +331,7 @@ sigma = 0.05
 q = 1.456
 
 alpha = 0.0001
-k = 10
+k = 15
 A = 100
 
 mainW = StockModels.WienerProcess()
