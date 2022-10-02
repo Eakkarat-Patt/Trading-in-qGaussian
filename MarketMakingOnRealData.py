@@ -232,14 +232,14 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
                 self.w[j, i] = self.GetCash()[j, i] + self.GetPosition()[j, i]
 
 
-p = np.loadtxt('sp500 open time series.txt')
-h = np.loadtxt('sp500 high time series.txt')
-l = np.loadtxt('sp500 low time series.txt')
-cl = np.loadtxt('sp500 close time series.txt')
+p = np.loadtxt('Dataset/sp500 open time series.txt')
+h = np.loadtxt('Dataset/sp500 high time series.txt')
+l = np.loadtxt('Dataset/sp500 low time series.txt')
+cl = np.loadtxt('Dataset/sp500 close time series.txt')
 
 path = GeneratePrice(p, h, l, cl)
 
-numSims = 300
+numSims = 200
 fkNumPaths = 200
 t0 = 1e-20
 T = 1
@@ -252,8 +252,8 @@ t = np.linspace(t0, T, p.shape[1])
 r0 = 0.00028
 sigma0 = 0.013
 r = 0.0002
-sigma = 0.015
-q = 1.5
+sigma = 0.015/1.55
+q = 1.51
 
 # Test params
 # r0 = 0.001
@@ -264,7 +264,7 @@ q = 1.5
 
 
 alpha = 0.0001
-k = 2000
+k = 3000
 
 # op = GeneratePrice(p)
 # high = GeneratePrice(h)

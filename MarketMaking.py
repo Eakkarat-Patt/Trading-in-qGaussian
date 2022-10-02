@@ -5,6 +5,7 @@ import StockModels
 import FeynmanKacFormula as fk
 from scipy.stats import skew
 from scipy.stats import kurtosis
+from scipy.stats import jarque_bera as jb
 import pandas as pd
 
 
@@ -16,6 +17,7 @@ def OrderArrival(numPaths, numSteps):
 
 class MarketMakingStrategy(object):
     def __init__(self, noise, numSims):
+        self.q = 0
         self.noise = noise
         self.numSims = numSims
         self.numSteps = self.noise.getW().shape[1]
@@ -110,6 +112,9 @@ class MarketMakingStrategy(object):
     def GetAskArrival(self):
         return self.askArrival
 
+    def GetEntropyIndex(self):
+        return self.q
+
 
 class BasicInventoryStrategy(MarketMakingStrategy):
     """
@@ -185,10 +190,11 @@ class GBMInventoryStrategy(MarketMakingStrategy):
     def __init__(self, noise, numSims):
         MarketMakingStrategy.__init__(self, noise, numSims)
 
-    def initializeSimulation(self, r, r0, sigma, sigma0, S0, alpha, k, A, order):
+    def initializeSimulation(self, r, r0, sigma, sigma0, S0, q, eta, k, A, order):
+        self.q = q
         p1 = StockModels.GeneralizedBrownianMotion(self.noise)
-        p1.generateStockPath(r, sigma, S0, q)
-        spread = 2 / k + alpha
+        p1.generateStockPath(r, sigma, S0, self.GetEntropyIndex())
+        spread = 2 / k + 2 * eta
         self.t = p1.GetTime()
         self.S = p1.GetS()
         self.ConditionalExpectationSGivenTime = self.getS() * np.exp(r0 * (T-self.getTime()))
@@ -206,7 +212,7 @@ class GBMInventoryStrategy(MarketMakingStrategy):
         self.ProbB[:, 0] = self.GetLambdaB()[:, 0] * dt
         for j in range(0, self.numSims):
             for i in range(1, self.numSteps):
-                self.rvPrice[j, i] = self.GetConditionalExpectationSGivenTime()[j, i] - self.getInventory()[j, i-1] * alpha * \
+                self.rvPrice[j, i] = self.GetConditionalExpectationSGivenTime()[j, i] - 2*self.getInventory()[j, i-1] * eta * \
                              self.GetConditionalExpectationS2GivenTime()[j, i]
 
                 self.bid[j, i] = self.getrvPrice()[j, i] - spread / 2.
@@ -245,20 +251,16 @@ class GBMInventoryStrategy(MarketMakingStrategy):
 class QGaussianInventoryStrategy(MarketMakingStrategy):
     def __init__(self, noise, numSims):
         MarketMakingStrategy.__init__(self, noise, numSims)
-        self.q = 0
 
-    def GetEntropyIndex(self):
-        return self.q
-
-    def initializeSimulation(self, r, sigma, S0, q, alpha, k, A, fkNumPaths, order):
+    def initializeSimulation(self, r, sigma, S0, q, eta, k, A, fkNumPaths, order):
+        self.q = q
         f1 = fk.FeynmanKacFormula(self.noise, fkNumPaths)
-        f1.generatePath(r, sigma, S0, q)
+        f1.generatePath(r, sigma, S0, self.GetEntropyIndex())
         self.ConditionalExpectationSGivenTime = f1.getConditionalExpectationS()
         self.ConditionalExpectationS2GivenTime = f1.getConditionalExpectationS2()
         self.S = f1.getMainPath()
         self.t = f1.getTime()
-        self.q = q
-        spread = 2 / k + alpha
+        spread = 2 / k + 2 * eta
         self.askArrival = order[0]
         self.bidArrival = order[1]
         self.rvPrice[:, 0] = self.GetConditionalExpectationSGivenTime()[:, 0]
@@ -272,8 +274,8 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
         self.ProbB[:, 0] = self.GetLambdaB()[:, 0] * dt
         for j in range(0, self.numSims):
             for i in range(1, self.numSteps):
-                self.rvPrice[j, i] = self.GetConditionalExpectationSGivenTime()[j, i] - self.getInventory()[j, i - 1] * \
-                                     alpha * self.GetConditionalExpectationS2GivenTime()[j, i]
+                self.rvPrice[j, i] = self.GetConditionalExpectationSGivenTime()[j, i] - 2*self.getInventory()[j, i - 1] * \
+                                     eta * self.GetConditionalExpectationS2GivenTime()[j, i]
 
                 self.bid[j, i] = self.getrvPrice()[j, i] - spread / 2.
                 self.ask[j, i] = self.getrvPrice()[j, i] + spread / 2.
@@ -327,13 +329,13 @@ S0 = 1
 r0 = 0.01
 sigma0 = 0.05
 r = 0.01
-sigma = 0.05
-q = 1.456
+sigma = 0.05/1.52
+q = 1.5
 
-alpha = 0.0001
-k = 15
-A = 100
-
+eta = 0.0001
+k = 80
+A = 140
+#/1.52
 mainW = StockModels.WienerProcess()
 mainW.generateWiener(numSims, numSteps, t0, T)
 
@@ -341,10 +343,22 @@ order = OrderArrival(numSims, numSteps)
 
 
 mm2 = GBMInventoryStrategy(mainW, numSims)
-mm2.initializeSimulation(r, r0, sigma, sigma0, S0, alpha, k, A, order)
+mm2.initializeSimulation(r, r0, sigma, sigma0, S0, 1.5, eta, k, A, order)
 
 mm3 = QGaussianInventoryStrategy(mainW, numSims)
-mm3.initializeSimulation(r, sigma, S0, q, alpha, k, A, fkNumPaths, order)
+mm3.initializeSimulation(r, sigma, S0, 1.5, eta, k, A, fkNumPaths, order)
+
+
+
+# mm4 = QGaussianInventoryStrategy(mainW, numSims)
+# mm4.initializeSimulation(r, sigma, S0, 1.5, eta, k, A, fkNumPaths, order)
+
+label = ['GBM', 'q-Gaussian']
+y = [mm2.getProfit(), mm3.getProfit()]
+#y2 = [mm2.getS(), mm3.getAsk(), mm3.getBid()]
+#
+# mm5 = QGaussianInventoryStrategy(mainW, numSims)
+# mm5.initializeSimulation(r, sigma, S0, 1.5, alpha, k, A, fkNumPaths, order)
 
 # np.count_nonzero(mm2.GetOrderConsumption()==1) +np.count_nonzero(mm2.GetOrderConsumption()==2)+2*np.count_nonzero(mm2.GetOrderConsumption()==4)
 
@@ -415,6 +429,29 @@ def Savetxt():
     np.savetxt('mm3 ProbB.txt', mm3.GetProbB()[:, :], fmt='%1.4f')
 
 
+def TimeSeriesPlot(x, y, label, pathNum, stop, ylabel=None):
+    plt.figure(figsize=(8, 5), dpi=500)
+    for i in range(len(y)):
+        plt.plot(x[x <= stop], y[i][pathNum, x <= stop], label=label[i])
+
+    plt.xlim([0, stop])
+    # plt.ylim([1.06, 1.11])
+    plt.ylabel(ylabel)
+    plt.xlabel('Time')
+    plt.legend()
+    plt.show()
+
+def DistributionPlot(y, label, color, title, binwidth, kde):
+    plt.figure(figsize=(8, 5), dpi=500)
+    for i in range(len(y)):
+        sns.histplot(y[i][:, -1], binwidth=binwidth, binrange=[y[1][:, -1].min(), y[1][:, -1].max()],
+                     color=color[i], label = label[i], kde=kde, fill=False)
+
+    # plt.xlim([-50, 150])
+    #plt.xlim([min(func1[:, -1]), max(func1[:, -1])])
+    plt.title(title)
+    plt.legend()
+    plt.show()
 
 def ProbPlot(func1, func2, pathNum, numStep):
     plt.figure(figsize=(8, 5), dpi=500)
@@ -443,13 +480,16 @@ def ProbPlot2(x, y1, y2, pathNum, stop):
     plt.show()
 
 
-def DistributionPlot(func1, func2, title, binwidth):
+
+
+def DistributionPlot2(func1, func2, binwidth):
     plt.figure(figsize=(8, 5), dpi=500)
-    sns.histplot(func1[:, -1], binwidth=binwidth, binrange=[func2[:, -1].min(), func2[:, -1].max()], color='r')
-    sns.histplot(func2[:, -1], binwidth=binwidth, binrange=[func2[:, -1].min(), func2[:, -1].max()], color='b')
+    sns.histplot(func1, binwidth=binwidth, binrange=[func2.min(), func2.max()], color='r', label='$q=1$')
+    sns.histplot(func2, binwidth=binwidth, binrange=[func2.min(), func2.max()], color='b', label='$q=1.5$')
     # plt.xlim([-50, 150])
-    plt.xlim([min(func1[:, -1]), max(func1[:, -1])])
-    plt.title(title)
+    plt.xlim([min(func1), max(func1)])
+    plt.xlabel('$')
+    plt.legend()
     plt.show()
 
 
@@ -508,7 +548,6 @@ def AskPlot(func1, func2, pathNum):
 
 def SpreadPlot(func, pathNum, title=None):
     plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(func.getTime(), func.getrvPrice()[pathNum, :], label='Reservation price')
     plt.plot(func.getTime(), func.getS()[pathNum, :], label='Price')
     plt.plot(func.getTime(), func.getBid()[pathNum, :], label='Bid')
     plt.plot(func.getTime(), func.getAsk()[pathNum, :], label='Ask')
@@ -520,31 +559,9 @@ def SpreadPlot(func, pathNum, title=None):
     plt.show()
 
 
-def TimeSeriesPlot(x, y1, y2, pathNum, stop, label1=None, label2=None, legend=True, ylabel=None):
-    plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(x[x <= stop], y1[pathNum, x <= stop], label=label1)
-    plt.plot(x[x <= stop], y2[pathNum, x <= stop], label=label2)
-    plt.xlim([0, stop])
-    # plt.ylim([1.06, 1.11])
-    plt.ylabel(ylabel)
-    plt.xlabel('Time')
-    if legend:
-        plt.legend()
-    plt.show()
 
 
-def TimeSeriesPlot2(x, y1, y2, y3, pathNum, stop, label1=None, label2=None, label3=None, legend=True, ylabel=None):
-    plt.figure(figsize=(8, 5), dpi=500)
-    plt.plot(x[x <= stop], y1[pathNum, x <= stop], label=label1)
-    plt.plot(x[x <= stop], y2[pathNum, x <= stop], label=label2)
-    plt.plot(x[x <= stop], y3[pathNum, x <= stop], label=label3)
-    plt.xlim([0, stop])
-    # plt.ylim([1.06, 1.11])
-    plt.ylabel(ylabel)
-    plt.xlabel('Time')
-    if legend:
-        plt.legend()
-    plt.show()
+
 
 
 def CashPlot(func1, func2, pathNum):
@@ -569,6 +586,35 @@ def CashPlot(func1, func2, pathNum):
         if func2.GetOrderConsumption()[pathNum, i] == 4:
             plt.scatter(func2.getTime()[i], func2.GetCash()[pathNum, i], color='k', s=9)
     plt.xlim([0.0, func1.getTime()[-1]])
+    plt.title('Cash vs time')
+    plt.ylabel('Cash')
+    plt.xlabel('Time')
+    plt.legend()
+    plt.legend((a, b, c, d), ('buy', 'sell', 'No matched order', 'both order matched'))
+    plt.show()
+
+def RVPricePlot(func1, func2, pathNum):
+    plt.figure(figsize=(8, 5), dpi=500)
+    plt.plot(mm2.getTime(), func1[pathNum, :], label='GBM')
+    plt.plot(mm3.getTime(), func2[pathNum, :], label='qGaussian')
+    for i in range(0, mm2.getnumSteps()):
+        if mm2.GetOrderConsumption()[pathNum, i] == 1:
+            a = plt.scatter(mm2.getTime()[i], func1[pathNum, i], color='b', s=9)
+        if mm2.GetOrderConsumption()[pathNum, i] == 2:
+            b = plt.scatter(mm2.getTime()[i], func1[pathNum, i], color='g', s=9)
+        if mm2.GetOrderConsumption()[pathNum, i] == 3:
+            c = plt.scatter(mm2.getTime()[i], func1[pathNum, i], color='r', s=9)
+        if mm2.GetOrderConsumption()[pathNum, i] == 4:
+            d = plt.scatter(mm2.getTime()[i], func1[pathNum, i], color='k', s=9)
+        if mm3.GetOrderConsumption()[pathNum, i] == 1:
+            plt.scatter(mm3.getTime()[i], func2[pathNum, i], color='b', s=9)
+        if mm3.GetOrderConsumption()[pathNum, i] == 2:
+            plt.scatter(mm3.getTime()[i], func2[pathNum, i], color='g', s=9)
+        if mm3.GetOrderConsumption()[pathNum, i] == 3:
+            plt.scatter(mm3.getTime()[i], func2[pathNum, i], color='r', s=9)
+        if mm3.GetOrderConsumption()[pathNum, i] == 4:
+            plt.scatter(mm3.getTime()[i], func2[pathNum, i], color='k', s=9)
+    plt.xlim([0.0, mm2.getTime()[-1]])
     plt.title('Cash vs time')
     plt.ylabel('Cash')
     plt.xlabel('Time')
