@@ -333,7 +333,7 @@ sigma = 0.05/1.52
 q = 1.5
 
 eta = 0.0001
-k = 80
+k = 20
 A = 140
 #/1.52
 mainW = StockModels.WienerProcess()
