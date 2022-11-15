@@ -282,7 +282,10 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
 
                 self.deltaB[j, i] = self.getS()[j, i] - self.getBid()[j, i]
                 self.deltaA[j, i] = self.getAsk()[j, i] - self.getS()[j, i]
-
+                if self.GetDeltaA()[j, i] < 0:
+                    self.ask[j, i] = self.getS()[j, i]
+                if self.GetDeltaB()[j, i] < 0:
+                    self.bid[j, i] = self.getS()[j, i]
                 self.lambdaA[j, i] = A * np.exp(-k * self.GetDeltaA()[j, i])
                 self.ProbA[j, i] = self.GetLambdaA()[j, i] * dt
 
@@ -326,14 +329,14 @@ S0 = 1
 # q = 1.456
 
 #Test params
-r0 = 0.01
+r0 = 0.05
 sigma0 = 0.05
-r = 0.01
-sigma = 0.05/1.52
+r = 0.05
+sigma = 0.05
 q = 1.5
 
-eta = 0.0001
-k = 20
+eta = 0.001
+k = 80
 A = 140
 #/1.52
 mainW = StockModels.WienerProcess()
@@ -353,8 +356,12 @@ mm3.initializeSimulation(r, sigma, S0, 1.5, eta, k, A, fkNumPaths, order)
 # mm4 = QGaussianInventoryStrategy(mainW, numSims)
 # mm4.initializeSimulation(r, sigma, S0, 1.5, eta, k, A, fkNumPaths, order)
 
-label = ['GBM', 'q-Gaussian']
-y = [mm2.getProfit(), mm3.getProfit()]
+label = ['Price', 'Bid', 'Ask']
+profits = [mm2.getProfit(), mm3.getProfit()]
+rvPrices = [mm2.getrvPrice(), mm3.getrvPrice()]
+bid_askSpread = [mm3.getS(), mm3.getBid(), mm3.getAsk()]
+inventory = [mm2.getInventory(), mm3.getInventory()]
+cash = [mm2.GetCash(), mm3.GetCash()]
 #y2 = [mm2.getS(), mm3.getAsk(), mm3.getBid()]
 #
 # mm5 = QGaussianInventoryStrategy(mainW, numSims)
@@ -429,7 +436,7 @@ def Savetxt():
     np.savetxt('mm3 ProbB.txt', mm3.GetProbB()[:, :], fmt='%1.4f')
 
 
-def TimeSeriesPlot(x, y, label, pathNum, stop, ylabel=None):
+def TimeSeriesPlot(x, y, pathNum, stop, label = None, ylabel=None):
     plt.figure(figsize=(8, 5), dpi=500)
     for i in range(len(y)):
         plt.plot(x[x <= stop], y[i][pathNum, x <= stop], label=label[i])
@@ -438,6 +445,7 @@ def TimeSeriesPlot(x, y, label, pathNum, stop, ylabel=None):
     # plt.ylim([1.06, 1.11])
     plt.ylabel(ylabel)
     plt.xlabel('Time')
+    plt.xticks(np.arange(0, 1.1, 0.1))
     plt.legend()
     plt.show()
 
