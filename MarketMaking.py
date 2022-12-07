@@ -221,6 +221,11 @@ class GBMInventoryStrategy(MarketMakingStrategy):
                 self.deltaB[j, i] = self.getS()[j, i] - self.getBid()[j, i]
                 self.deltaA[j, i] = self.getAsk()[j, i] - self.getS()[j, i]
 
+                if self.GetDeltaA()[j, i] < 0:
+                    self.ask[j, i] = self.getS()[j, i]
+                if self.GetDeltaB()[j, i] < 0:
+                    self.bid[j, i] = self.getS()[j, i]
+
                 self.lambdaA[j, i] = A * np.exp(-k * self.GetDeltaA()[j, i])
                 self.ProbA[j, i] = self.GetLambdaA()[j, i] * dt
 
@@ -282,10 +287,12 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
 
                 self.deltaB[j, i] = self.getS()[j, i] - self.getBid()[j, i]
                 self.deltaA[j, i] = self.getAsk()[j, i] - self.getS()[j, i]
+
                 if self.GetDeltaA()[j, i] < 0:
                     self.ask[j, i] = self.getS()[j, i]
                 if self.GetDeltaB()[j, i] < 0:
                     self.bid[j, i] = self.getS()[j, i]
+
                 self.lambdaA[j, i] = A * np.exp(-k * self.GetDeltaA()[j, i])
                 self.ProbA[j, i] = self.GetLambdaA()[j, i] * dt
 
@@ -313,11 +320,11 @@ class QGaussianInventoryStrategy(MarketMakingStrategy):
                 self.w[j, i] = self.GetCash()[j, i] + self.GetPosition()[j, i]
 
 
-numSims = 1000
+numSims = 100
 fkNumPaths = 500
 t0 = 1e-20
 T = 1
-dt = 0.01
+dt = 0.005
 numSteps = int(T / dt)
 S0 = 1
 
@@ -336,7 +343,7 @@ sigma = 0.05
 q = 1.5
 
 eta = 0.001
-k = 80
+k = 1.5
 A = 140
 #/1.52
 mainW = StockModels.WienerProcess()
@@ -356,7 +363,7 @@ mm3.initializeSimulation(r, sigma, S0, 1.5, eta, k, A, fkNumPaths, order)
 # mm4 = QGaussianInventoryStrategy(mainW, numSims)
 # mm4.initializeSimulation(r, sigma, S0, 1.5, eta, k, A, fkNumPaths, order)
 
-label = ['Price', 'Bid', 'Ask']
+label = ['mm2', 'mm3']
 profits = [mm2.getProfit(), mm3.getProfit()]
 rvPrices = [mm2.getrvPrice(), mm3.getrvPrice()]
 bid_askSpread = [mm3.getS(), mm3.getBid(), mm3.getAsk()]
